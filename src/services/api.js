@@ -34,17 +34,5 @@ export const plateService = {
       console.error('Error searching plate:', error);
       throw error;
     }
-  },
-  
-  // ดึงข้อมูลทะเบียนทั้งหมดที่มี (หรือจำกัดตามที่กำหนด)
-  getAllPlates: async (limit = 0) => {
-    try {
-      const response = await apiClient.get('/plates/get_plates');
-      // ถ้า limit เป็น 0 หรือค่าลบ จะส่งคืนทั้งหมด
-      return limit > 0 ? response.data.slice(0, limit) : response.data;
-    } catch (error) {
-      console.error('Error fetching all plates:', error);
-      throw error;
-    }
   }
 };

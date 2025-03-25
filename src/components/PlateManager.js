@@ -1,5 +1,5 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { plateService } from '../services/api';
 
 const PlateManager = () => {
@@ -14,8 +14,15 @@ const PlateManager = () => {
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 50;
 
+  // อัพเดตข้อมูลที่แสดงตามหน้าปัจจุบัน
+  const updateDisplayPlates = useCallback((plates, page) => {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setDisplayPlates(plates.slice(startIndex, endIndex));
+  }, [itemsPerPage]);
+
   // โหลดรายการทะเบียนล่าสุด 250 รายการ
-  const loadLatestPlates = async () => {
+  const loadLatestPlates = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -37,32 +44,25 @@ const PlateManager = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // อัพเดตข้อมูลที่แสดงตามหน้าปัจจุบัน
-  const updateDisplayPlates = (plates, page) => {
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    setDisplayPlates(plates.slice(startIndex, endIndex));
-  };
+  }, [itemsPerPage, updateDisplayPlates]);
 
   // ไปหน้าถัดไป
-  const goToNextPage = () => {
+  const goToNextPage = useCallback(() => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
       updateDisplayPlates(allPlates, nextPage);
     }
-  };
+  }, [currentPage, totalPages, allPlates, updateDisplayPlates]);
 
   // ไปหน้าก่อนหน้า
-  const goToPrevPage = () => {
+  const goToPrevPage = useCallback(() => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
       setCurrentPage(prevPage);
       updateDisplayPlates(allPlates, prevPage);
     }
-  };
+  }, [currentPage, allPlates, updateDisplayPlates]);
 
   // ค้นหาทะเบียน
   const searchPlate = async () => {
@@ -116,7 +116,7 @@ const PlateManager = () => {
   // เรียกข้อมูลเมื่อโหลดหน้าแรก
   useEffect(() => {
     loadLatestPlates();
-  }, []);
+  }, [loadLatestPlates]);  // เพิ่ม loadLatestPlates เป็น dependency
 
   // ฟังก์ชันสำหรับแสดงเลขทะเบียน
   const getPlateNumber = (plateObj) => {
@@ -202,14 +202,14 @@ const PlateManager = () => {
                 onClick={goToPrevPage} 
                 disabled={currentPage === 1}
               >
-                <i className="bi bi-arrow-left"></i> ก่อนหน้า
+                &larr; ก่อนหน้า
               </button>
               <button 
                 className="btn btn-outline-primary" 
                 onClick={goToNextPage} 
                 disabled={currentPage === totalPages}
               >
-                ถัดไป <i className="bi bi-arrow-right"></i>
+                ถัดไป &rarr;
               </button>
             </div>
           </div>
