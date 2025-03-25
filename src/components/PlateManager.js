@@ -131,7 +131,7 @@ const PlateManager = () => {
     <div className="container mt-4">
       <h2 className="mb-4 text-center">ระบบจัดการทะเบียนรถ</h2>
 
-      {/* ส่วนค้นหา */}
+      {/* ส่วนค้นหาและปุ่มแสดงล่าสุด */}
       <div className="row mb-4">
         <div className="col-12">
           <div className="input-group">
@@ -148,6 +148,13 @@ const PlateManager = () => {
               disabled={loading}
             >
               {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+            </button>
+            <button 
+              className="btn btn-success" 
+              onClick={loadLatestPlates}
+              disabled={loading}
+            >
+              {loading ? 'กำลังโหลด...' : 'แสดง 250 รายการล่าสุด'}
             </button>
           </div>
         </div>
