@@ -131,14 +131,14 @@ const PlateManager = () => {
     <div className="container mt-4">
       <h2 className="mb-4 text-center">ระบบจัดการทะเบียนรถ</h2>
 
-      {/* ส่วนค้นหาและปุ่มแสดงล่าสุด */}
+      {/* ส่วนค้นหา */}
       <div className="row mb-4">
-        <div className="col-md-8">
+        <div className="col-12">
           <div className="input-group">
             <input
               type="text"
               className="form-control"
-              placeholder="ค้นหาเลขทะเบียน"
+              placeholder="ค้นหาเลขทะเบียน/เบื้องต้นจะแสดง250ทะเบียนล่าสุดในระบบ"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -150,15 +150,6 @@ const PlateManager = () => {
               {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
             </button>
           </div>
-        </div>
-        <div className="col-md-4">
-          <button 
-            className="btn btn-success w-100"
-            onClick={loadLatestPlates}
-            disabled={loading}
-          >
-            {loading ? 'กำลังโหลด...' : 'แสดง 250 รายการล่าสุด'}
-          </button>
         </div>
       </div>
 
