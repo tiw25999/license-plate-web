@@ -3,23 +3,64 @@ import React, { useEffect, useState } from 'react';
 import { plateService } from '../services/api';
 
 const PlateManager = () => {
-  const [plates, setPlates] = useState([]);
+  const [allPlates, setAllPlates] = useState([]); // เก็บข้อมูลทั้งหมด 250 รายการ
+  const [displayPlates, setDisplayPlates] = useState([]); // เก็บข้อมูลที่แสดงในหน้าปัจจุบัน
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // ตัวแปรสำหรับการแบ่งหน้า
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 50;
 
-  // โหลดรายการทะเบียนล่าสุด
+  // โหลดรายการทะเบียนล่าสุด 250 รายการ
   const loadLatestPlates = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await plateService.getLatestPlates();
-      console.log('Latest plates data:', data); // เพิ่มการแสดงข้อมูลที่ได้รับ
-      setPlates(Array.isArray(data) ? data : [data]);
+      const data = await plateService.getLatestPlates(250); // เปลี่ยนเป็นดึง 250 รายการ
+      console.log('Latest plates data:', data);
+      
+      const platesArray = Array.isArray(data) ? data : [data];
+      setAllPlates(platesArray);
+      
+      // คำนวณจำนวนหน้าทั้งหมด
+      const pages = Math.ceil(platesArray.length / itemsPerPage);
+      setTotalPages(pages);
+      
+      // เซ็ตข้อมูลสำหรับหน้าแรก
+      setCurrentPage(1);
+      updateDisplayPlates(platesArray, 1);
     } catch (err) {
       setError('ไม่สามารถโหลดข้อมูลทะเบียนได้: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // อัพเดตข้อมูลที่แสดงตามหน้าปัจจุบัน
+  const updateDisplayPlates = (plates, page) => {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setDisplayPlates(plates.slice(startIndex, endIndex));
+  };
+
+  // ไปหน้าถัดไป
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      updateDisplayPlates(allPlates, nextPage);
+    }
+  };
+
+  // ไปหน้าก่อนหน้า
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      const prevPage = currentPage - 1;
+      setCurrentPage(prevPage);
+      updateDisplayPlates(allPlates, prevPage);
     }
   };
 
@@ -34,26 +75,36 @@ const PlateManager = () => {
       setLoading(true);
       setError(null);
       const data = await plateService.searchPlate(searchTerm);
-      console.log('Search result data:', data); // เพิ่มการแสดงข้อมูลที่ได้รับ
+      console.log('Search result data:', data);
       
       // ตรวจสอบโครงสร้างข้อมูลและแปลงให้อยู่ในรูปแบบที่ถูกต้อง
       if (data) {
+        let searchResults = [];
+        
         if (Array.isArray(data)) {
-          setPlates(data);
+          searchResults = data;
         } else if (data.plate_number) {
-          // กรณีที่ API ส่งกลับข้อมูลในรูปแบบ { plate_number: '...', timestamp: '...' }
-          setPlates([{ plate: data.plate_number, timestamp: data.timestamp }]);
+          searchResults = [{ plate: data.plate_number, timestamp: data.timestamp }];
         } else {
-          // กรณีทั่วไป
-          setPlates([data]);
+          searchResults = [data];
         }
+        
+        // กำหนดผลลัพธ์การค้นหาเป็นข้อมูลทั้งหมดและแสดงหน้าแรก
+        setAllPlates(searchResults);
+        setTotalPages(Math.ceil(searchResults.length / itemsPerPage));
+        setCurrentPage(1);
+        updateDisplayPlates(searchResults, 1);
       } else {
-        setPlates([]);
+        setAllPlates([]);
+        setDisplayPlates([]);
+        setTotalPages(1);
+        setCurrentPage(1);
       }
     } catch (err) {
       if (err.response && err.response.status === 404) {
         setError('ไม่พบทะเบียนที่ค้นหา');
-        setPlates([]);
+        setAllPlates([]);
+        setDisplayPlates([]);
       } else {
         setError('เกิดข้อผิดพลาดในการค้นหา: ' + err.message);
       }
@@ -67,18 +118,11 @@ const PlateManager = () => {
     loadLatestPlates();
   }, []);
 
-  // ดูข้อมูลที่ได้จากการ setState
-  useEffect(() => {
-    console.log('Current plates state:', plates);
-  }, [plates]);
-
-  // ฟังก์ชันสำหรับแสดงเลขทะเบียน (ตรวจสอบทั้งรูปแบบ plate และ plate_number)
+  // ฟังก์ชันสำหรับแสดงเลขทะเบียน
   const getPlateNumber = (plateObj) => {
     if (!plateObj) return '-';
     if (plateObj.plate) return plateObj.plate;
     if (plateObj.plate_number) return plateObj.plate_number;
-    
-    // กรณีที่เป็นออบเจกต์แต่ไม่มีทั้ง plate และ plate_number
     return JSON.stringify(plateObj);
   };
 
@@ -113,7 +157,7 @@ const PlateManager = () => {
             onClick={loadLatestPlates}
             disabled={loading}
           >
-            {loading ? 'กำลังโหลด...' : 'แสดง 50 รายการล่าสุด'}
+            {loading ? 'กำลังโหลด...' : 'แสดง 250 รายการล่าสุด'}
           </button>
         </div>
       </div>
@@ -123,31 +167,57 @@ const PlateManager = () => {
       {error && <div className="alert alert-danger">{error}</div>}
 
       {/* ตารางแสดงทะเบียน */}
-      {!loading && !error && plates.length > 0 && (
-        <div className="table-responsive">
-          <table className="table table-striped table-hover">
-            <thead className="table-dark">
-              <tr>
-                <th>ลำดับ</th>
-                <th>เลขทะเบียน</th>
-                <th>วันที่บันทึก</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plates.map((plate, index) => (
-                <tr key={index}>
-                  <td>{index + 1}</td>
-                  <td>{getPlateNumber(plate)}</td>
-                  <td>{plate.timestamp}</td>
+      {!loading && !error && displayPlates.length > 0 && (
+        <>
+          <div className="table-responsive">
+            <table className="table table-striped table-hover">
+              <thead className="table-dark">
+                <tr>
+                  <th>ลำดับ</th>
+                  <th>เลขทะเบียน</th>
+                  <th>วันที่บันทึก</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {displayPlates.map((plate, index) => (
+                  <tr key={index}>
+                    <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                    <td>{getPlateNumber(plate)}</td>
+                    <td>{plate.timestamp}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ส่วนแสดงการแบ่งหน้า */}
+          <div className="pagination-container d-flex justify-content-between align-items-center mt-3">
+            <div>
+              <span className="me-2">หน้า {currentPage} จาก {totalPages}</span>
+              <span>แสดงรายการ {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, allPlates.length)} จากทั้งหมด {allPlates.length} รายการ</span>
+            </div>
+            <div>
+              <button 
+                className="btn btn-outline-primary me-2" 
+                onClick={goToPrevPage} 
+                disabled={currentPage === 1}
+              >
+                <i className="bi bi-arrow-left"></i> ก่อนหน้า
+              </button>
+              <button 
+                className="btn btn-outline-primary" 
+                onClick={goToNextPage} 
+                disabled={currentPage === totalPages}
+              >
+                ถัดไป <i className="bi bi-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* แสดงข้อความเมื่อไม่พบข้อมูล */}
-      {!loading && !error && plates.length === 0 && (
+      {!loading && !error && displayPlates.length === 0 && (
         <div className="alert alert-info">ไม่พบข้อมูลทะเบียน</div>
       )}
     </div>
