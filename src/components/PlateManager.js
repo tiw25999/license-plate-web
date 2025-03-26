@@ -8,6 +8,7 @@ const PlateManager = () => {
   const [displayPlates, setDisplayPlates] = useState([]); // เก็บข้อมูลที่แสดงในหน้าปัจจุบัน
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
+  // eslint-disable-next-line no-unused-vars
   const [endDate, setEndDate] = useState('');
   const [startMonth, setStartMonth] = useState('');
   const [endMonth, setEndMonth] = useState('');
