@@ -225,7 +225,7 @@ const PlateManager = () => {
     }
     
     searchPlatesWithParams(searchParams);
-  }, [searchMode, searchTerm, startDate, endDate, startMonth, endMonth, startYear, endYear, startHour, endHour, searchPlatesWithParams]);
+  }, [searchMode, searchTerm, startDate, startMonth, endMonth, startYear, endYear, startHour, endHour, searchPlatesWithParams]);
 
   // ปรับเปลี่ยนจำนวนรายการต่อหน้า
   const handleItemsPerPageChange = useCallback((e) => {
