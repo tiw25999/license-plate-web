@@ -55,7 +55,7 @@ export const plateService = {
     }
   },
 
-  // ค้นหาทะเบียนตามเลขทะเบียน (ใช้ endpoint เดิม)
+  // ค้นหาทะเบียนตามเลขทะเบียนแบบเฉพาะเจาะจง (ใช้ endpoint เดิม)
   searchPlateExact: async (plateNumber) => {
     try {
       const response = await apiClient.get(`/plates/get_plates?plate_number=${plateNumber}`);
@@ -66,15 +66,40 @@ export const plateService = {
     }
   },
 
-  // ค้นหาทะเบียนแบบคลุมเครือ (ใช้ endpoint ใหม่)
+  // ค้นหาทะเบียนแบบละเอียด (ใช้ endpoint ใหม่)
   searchPlates: async (params) => {
     try {
-      const { searchTerm, startDate, endDate, limit = 500 } = params;
+      const { 
+        searchTerm, 
+        startDate, 
+        endDate, 
+        startMonth, 
+        endMonth, 
+        startYear, 
+        endYear,
+        startHour,
+        endHour,
+        limit = 500 
+      } = params;
+      
       const queryParams = new URLSearchParams();
       
       if (searchTerm) queryParams.append('search_term', searchTerm);
+      
+      // วันที่
       if (startDate) queryParams.append('start_date', startDate);
       if (endDate) queryParams.append('end_date', endDate);
+      
+      // เดือน/ปี
+      if (startMonth) queryParams.append('start_month', startMonth);
+      if (endMonth) queryParams.append('end_month', endMonth);
+      if (startYear) queryParams.append('start_year', startYear);
+      if (endYear) queryParams.append('end_year', endYear);
+      
+      // เวลา
+      if (startHour) queryParams.append('start_hour', startHour);
+      if (endHour) queryParams.append('end_hour', endHour);
+      
       if (limit) queryParams.append('limit', limit);
       
       const response = await apiClient.get(`/plates/search?${queryParams.toString()}`);

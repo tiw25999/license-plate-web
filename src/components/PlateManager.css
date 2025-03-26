@@ -1,14 +1,20 @@
-.plate-manager .advanced-search-form {
+.plate-manager .search-form {
     background-color: #f8f9fa;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
   }
   
-  .plate-manager .search-type-toggle {
-    display: flex;
-    gap: 5px;
+  .plate-manager .search-mode-toggle {
     margin-bottom: 15px;
+  }
+  
+  .plate-manager .search-mode-toggle .btn-group {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .plate-manager .search-mode-toggle .btn {
+    font-size: 0.9rem;
   }
   
   .plate-manager .plate-number {
@@ -65,6 +71,15 @@
     display: inline-block;
   }
   
+  .plate-manager .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .plate-manager .form-label {
+    margin-bottom: 0.3rem;
+    font-weight: 500;
+  }
+  
   @media (max-width: 767px) {
     .plate-manager .pagination-container {
       flex-direction: column;
@@ -75,5 +90,25 @@
     .plate-manager .pagination-controls {
       width: 100%;
       margin-bottom: 10px;
+    }
+    
+    .plate-manager .search-mode-toggle .btn-group {
+      flex-direction: column;
+    }
+    
+    .plate-manager .search-mode-toggle .btn {
+      border-radius: 0;
+      margin-bottom: -1px;
+    }
+    
+    .plate-manager .search-mode-toggle .btn:first-child {
+      border-top-left-radius: 0.25rem;
+      border-top-right-radius: 0.25rem;
+    }
+    
+    .plate-manager .search-mode-toggle .btn:last-child {
+      border-bottom-left-radius: 0.25rem;
+      border-bottom-right-radius: 0.25rem;
+      margin-bottom: 0;
     }
   }

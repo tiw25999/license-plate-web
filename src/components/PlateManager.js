@@ -9,6 +9,12 @@ const PlateManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [startMonth, setStartMonth] = useState('');
+  const [endMonth, setEndMonth] = useState('');
+  const [startYear, setStartYear] = useState('');
+  const [endYear, setEndYear] = useState('');
+  const [startHour, setStartHour] = useState('');
+  const [endHour, setEndHour] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [apiStatus, setApiStatus] = useState(null);
@@ -20,7 +26,7 @@ const PlateManager = () => {
   const [totalRecords, setTotalRecords] = useState(0);
 
   // ตัวแปรสำหรับการกรอง
-  const [advancedSearch, setAdvancedSearch] = useState(false);
+  const [searchMode, setSearchMode] = useState('quick'); // 'quick', 'date', 'month', 'year', 'time'
   const [lastSearchParams, setLastSearchParams] = useState({});
 
   // อัพเดตข้อมูลที่แสดงตามหน้าปัจจุบัน
@@ -48,9 +54,15 @@ const PlateManager = () => {
       setSearchTerm('');
       setStartDate('');
       setEndDate('');
+      setStartMonth('');
+      setEndMonth('');
+      setStartYear('');
+      setEndYear('');
+      setStartHour('');
+      setEndHour('');
       setLastSearchParams({});
       
-      const data = await plateService.getLatestPlates(500); // เพิ่มเป็น 500 รายการ
+      const data = await plateService.getLatestPlates(500);
       
       const platesArray = Array.isArray(data) ? data : [data];
       setAllPlates(platesArray);
@@ -58,7 +70,7 @@ const PlateManager = () => {
       
       // คำนวณจำนวนหน้าทั้งหมด
       const pages = Math.ceil(platesArray.length / itemsPerPage);
-      setTotalPages(pages);
+      setTotalPages(pages || 1);
       
       // เซ็ตข้อมูลสำหรับหน้าแรก
       setCurrentPage(1);
@@ -74,13 +86,11 @@ const PlateManager = () => {
 
   // ค้นหาทะเบียน (แบบใหม่ใช้ endpoint ค้นหา)
   const searchPlatesWithParams = useCallback(async (params = {}) => {
-    const searchParams = {
-      ...params,
-      limit: 500 // จำกัดผลลัพธ์สูงสุด
-    };
+    // สร้าง search params ตามโหมดการค้นหา
+    let searchParams = { ...params, limit: 500 };
     
     // ถ้าไม่มีค่าการค้นหาเลย ให้โหลดข้อมูลล่าสุด
-    if (!searchParams.searchTerm && !searchParams.startDate && !searchParams.endDate) {
+    if (!Object.values(searchParams).some(value => value)) {
       return loadLatestPlates();
     }
     
@@ -179,12 +189,41 @@ const PlateManager = () => {
   // ฟังก์ชันสำหรับค้นหาด้วยฟอร์ม
   const handleSearchSubmit = useCallback((e) => {
     e.preventDefault();
-    searchPlatesWithParams({
-      searchTerm: searchTerm.trim(),
-      startDate,
-      endDate
-    });
-  }, [searchPlatesWithParams, searchTerm, startDate, endDate]);
+    
+    // สร้างพารามิเตอร์การค้นหาตามโหมดที่เลือก
+    let searchParams = {};
+    
+    // พารามิเตอร์ทั่วไป - ทะเบียนรถ
+    if (searchTerm.trim()) {
+      searchParams.searchTerm = searchTerm.trim();
+    }
+    
+    // พารามิเตอร์เฉพาะโหมด
+    switch (searchMode) {
+      case 'date':
+        if (startDate) searchParams.startDate = startDate;
+        if (endDate) searchParams.endDate = endDate;
+        break;
+      case 'month':
+        if (startMonth) searchParams.startMonth = startMonth;
+        if (endMonth) searchParams.endMonth = endMonth;
+        if (startYear) searchParams.startYear = startYear;
+        if (endYear) searchParams.endYear = endYear;
+        break;
+      case 'year':
+        if (startYear) searchParams.startYear = startYear;
+        if (endYear) searchParams.endYear = endYear;
+        break;
+      case 'time':
+        if (startHour) searchParams.startHour = startHour;
+        if (endHour) searchParams.endHour = endHour;
+        break;
+      default:
+        break;
+    }
+    
+    searchPlatesWithParams(searchParams);
+  }, [searchMode, searchTerm, startDate, endDate, startMonth, endMonth, startYear, endYear, startHour, endHour, searchPlatesWithParams]);
 
   // ปรับเปลี่ยนจำนวนรายการต่อหน้า
   const handleItemsPerPageChange = useCallback((e) => {
@@ -193,15 +232,83 @@ const PlateManager = () => {
     
     // คำนวณหน้าใหม่
     const newTotalPages = Math.ceil(allPlates.length / newItemsPerPage);
-    setTotalPages(newTotalPages);
+    setTotalPages(newTotalPages || 1);
     
     // ปรับหน้าปัจจุบันถ้าเกินหน้าสุดท้าย
-    const newCurrentPage = Math.min(currentPage, newTotalPages);
+    const newCurrentPage = Math.min(currentPage, newTotalPages || 1);
     setCurrentPage(newCurrentPage);
     
     // อัพเดตการแสดงผล
     updateDisplayPlates(allPlates, newCurrentPage);
   }, [allPlates, currentPage, updateDisplayPlates]);
+
+  // ฟังก์ชันสำหรับรีเซ็ตฟอร์มทั้งหมด
+  const resetAllForms = useCallback(() => {
+    setSearchTerm('');
+    setStartDate('');
+    setEndDate('');
+    setStartMonth('');
+    setEndMonth('');
+    setStartYear('');
+    setEndYear('');
+    setStartHour('');
+    setEndHour('');
+    loadLatestPlates();
+  }, [loadLatestPlates]);
+
+  // ฟังก์ชันสำหรับสร้างตัวเลือกเดือน
+  const renderMonthOptions = useMemo(() => {
+    const options = [];
+    const monthNames = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+    
+    options.push(<option key="month-0" value="">เลือกเดือน</option>);
+    for (let i = 0; i < 12; i++) {
+      options.push(
+        <option key={`month-${i+1}`} value={i+1}>
+          {monthNames[i]} ({i+1})
+        </option>
+      );
+    }
+    
+    return options;
+  }, []);
+
+  // ฟังก์ชันสำหรับสร้างตัวเลือกปี
+  const renderYearOptions = useMemo(() => {
+    const options = [];
+    const currentYear = new Date().getFullYear();
+    const startYear = 2020; // ปีเริ่มต้นที่ต้องการให้แสดง
+    
+    options.push(<option key="year-0" value="">เลือกปี</option>);
+    for (let year = currentYear; year >= startYear; year--) {
+      options.push(
+        <option key={`year-${year}`} value={year}>
+          {year}
+        </option>
+      );
+    }
+    
+    return options;
+  }, []);
+
+  // ฟังก์ชันสำหรับสร้างตัวเลือกชั่วโมง
+  const renderHourOptions = useMemo(() => {
+    const options = [];
+    
+    options.push(<option key="hour-default" value="">เลือกเวลา</option>);
+    for (let hour = 0; hour < 24; hour++) {
+      options.push(
+        <option key={`hour-${hour}`} value={hour}>
+          {hour < 10 ? `0${hour}` : hour}:00
+        </option>
+      );
+    }
+    
+    return options;
+  }, []);
 
   // ตรวจสอบสถานะ API เมื่อโหลดครั้งแรก
   useEffect(() => {
@@ -224,12 +331,12 @@ const PlateManager = () => {
 
   // ค้นหาแบบทันทีเมื่อมีการเปลี่ยนแปลงคำค้นหา (กรณีที่เปิดใช้งาน)
   useEffect(() => {
-    if (advancedSearch) return; // ไม่ใช้ auto-search ในโหมดการค้นหาขั้นสูง
+    if (searchMode !== 'quick') return; // ใช้แบบ auto-search เฉพาะในโหมด quick
     
     if (searchTerm) {
       debouncedSearch(searchTerm);
     }
-  }, [searchTerm, debouncedSearch, advancedSearch]);
+  }, [searchTerm, debouncedSearch, searchMode]);
 
   // สร้างปุ่มสำหรับการแบ่งหน้า
   const renderPaginationButtons = useMemo(() => {
@@ -312,66 +419,77 @@ const PlateManager = () => {
         </div>
       )}
 
-      {/* สลับระหว่างการค้นหาแบบง่ายและขั้นสูง */}
-      <div className="search-type-toggle mb-2">
-        <button 
-          className={`btn btn-sm ${!advancedSearch ? 'btn-primary' : 'btn-outline-secondary'}`}
-          onClick={() => setAdvancedSearch(false)}
-        >
-          ค้นหาแบบด่วน
-        </button>
-        <button 
-          className={`btn btn-sm ${advancedSearch ? 'btn-primary' : 'btn-outline-secondary'}`}
-          onClick={() => setAdvancedSearch(true)}
-        >
-          ค้นหาขั้นสูง
-        </button>
+      {/* สลับระหว่างโหมดการค้นหาต่างๆ */}
+      <div className="search-mode-toggle mb-3">
+        <div className="btn-group w-100">
+          <button 
+            className={`btn ${searchMode === 'quick' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setSearchMode('quick')}
+          >
+            <i className="bi bi-search"></i> ค้นหาด่วน
+          </button>
+          <button 
+            className={`btn ${searchMode === 'date' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setSearchMode('date')}
+          >
+            <i className="bi bi-calendar-date"></i> ค้นหาตามวันที่
+          </button>
+          <button 
+            className={`btn ${searchMode === 'month' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setSearchMode('month')}
+          >
+            <i className="bi bi-calendar-month"></i> ค้นหาตามเดือน
+          </button>
+          <button 
+            className={`btn ${searchMode === 'year' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setSearchMode('year')}
+          >
+            <i className="bi bi-calendar-range"></i> ค้นหาตามปี
+          </button>
+          <button 
+            className={`btn ${searchMode === 'time' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setSearchMode('time')}
+          >
+            <i className="bi bi-clock"></i> ค้นหาตามเวลา
+          </button>
+        </div>
       </div>
 
-      {/* ส่วนค้นหา */}
-      {!advancedSearch ? (
-        // การค้นหาแบบด่วน (auto-search)
-        <div className="row mb-4">
-          <div className="col-12">
-            <div className="input-group">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="ป้อนเลขทะเบียนที่ต้องการค้นหา (ค้นหาแบบอัตโนมัติเมื่อพิมพ์)"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+      {/* แสดงฟอร์มการค้นหาตามโหมดที่เลือก */}
+      <form onSubmit={handleSearchSubmit} className="mb-4 search-form">
+        {/* ช่องค้นหาทะเบียน - แสดงในทุกโหมด */}
+        <div className="mb-3">
+          <div className="input-group">
+            <span className="input-group-text">ทะเบียนรถ</span>
+            <input
+              type="text"
+              className="form-control"
+              placeholder={searchMode === 'quick' ? "พิมพ์เพื่อค้นหาอัตโนมัติ..." : "ป้อนทะเบียนที่ต้องการค้นหา..."}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchMode === 'quick' && (
               <button 
+                type="button"
                 className="btn btn-success" 
                 onClick={loadLatestPlates}
                 disabled={loading}
               >
                 {loading ? 'กำลังโหลด...' : 'แสดงทั้งหมด'}
               </button>
-            </div>
-            <small className="text-muted">พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อเริ่มค้นหาอัตโนมัติ</small>
+            )}
           </div>
+          {searchMode === 'quick' && (
+            <small className="form-text text-muted">พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อเริ่มค้นหาอัตโนมัติ</small>
+          )}
         </div>
-      ) : (
-        // การค้นหาขั้นสูง (ใช้ฟอร์ม)
-        <form onSubmit={handleSearchSubmit} className="mb-4 advanced-search-form">
-          <div className="row g-2">
-            <div className="col-md-4">
+
+        {/* ฟอร์มค้นหาตามวันที่ */}
+        {searchMode === 'date' && (
+          <div className="row mb-3">
+            <div className="col-md-5">
               <div className="form-group">
-                <label htmlFor="searchTerm">เลขทะเบียน</label>
-                <input
-                  type="text"
-                  id="searchTerm"
-                  className="form-control"
-                  placeholder="ค้นหาเลขที่ขึ้นต้นด้วย..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="form-group">
-                <label htmlFor="startDate">วันที่เริ่มต้น</label>
+                <label htmlFor="startDate" className="form-label">วันที่เริ่มต้น</label>
                 <input
                   type="text"
                   id="startDate"
@@ -382,9 +500,9 @@ const PlateManager = () => {
                 />
               </div>
             </div>
-            <div className="col-md-3">
+            <div className="col-md-5">
               <div className="form-group">
-                <label htmlFor="endDate">วันที่สิ้นสุด</label>
+                <label htmlFor="endDate" className="form-label">วันที่สิ้นสุด</label>
                 <input
                   type="text"
                   id="endDate"
@@ -396,47 +514,207 @@ const PlateManager = () => {
               </div>
             </div>
             <div className="col-md-2 d-flex align-items-end">
-              <div className="form-group w-100">
-                <button 
-                  type="submit" 
-                  className="btn btn-primary w-100"
-                  disabled={loading}
-                >
-                  {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
-                </button>
-              </div>
+              <button 
+                type="submit" 
+                className="btn btn-primary w-100"
+                disabled={loading}
+              >
+                {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+              </button>
+            </div>
+            <div className="col-12 mt-1">
+              <small className="form-text text-muted">รูปแบบ: วัน/เดือน/ปี (เช่น 01/12/2023)</small>
             </div>
           </div>
-          <div className="row mt-2">
-            <div className="col-12">
-              <small className="text-muted">
-                รูปแบบวันที่: วัน/เดือน/ปี (เช่น 01/12/2023) 
-                <button 
-                  type="button" 
-                  className="btn btn-sm btn-outline-secondary ml-2"
-                  onClick={loadLatestPlates}
+        )}
+
+        {/* ฟอร์มค้นหาตามเดือน */}
+        {searchMode === 'month' && (
+          <div className="row mb-3">
+            <div className="col-md-3">
+              <div className="form-group">
+                <label htmlFor="startMonth" className="form-label">เดือนเริ่มต้น</label>
+                <select
+                  id="startMonth"
+                  className="form-select"
+                  value={startMonth}
+                  onChange={(e) => setStartMonth(e.target.value)}
                 >
-                  ล้างการค้นหา
-                </button>
+                  {renderMonthOptions}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="form-group">
+                <label htmlFor="startYear" className="form-label">ปีเริ่มต้น</label>
+                <select
+                  id="startYear"
+                  className="form-select"
+                  value={startYear}
+                  onChange={(e) => setStartYear(e.target.value)}
+                >
+                  {renderYearOptions}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="form-group">
+                <label htmlFor="endMonth" className="form-label">เดือนสิ้นสุด</label>
+                <select
+                  id="endMonth"
+                  className="form-select"
+                  value={endMonth}
+                  onChange={(e) => setEndMonth(e.target.value)}
+                >
+                  {renderMonthOptions}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="form-group">
+                <label htmlFor="endYear" className="form-label">ปีสิ้นสุด</label>
+                <select
+                  id="endYear"
+                  className="form-select"
+                  value={endYear}
+                  onChange={(e) => setEndYear(e.target.value)}
+                >
+                  {renderYearOptions}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-2 d-flex align-items-end">
+              <button 
+                type="submit" 
+                className="btn btn-primary w-100"
+                disabled={loading}
+              >
+                {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ฟอร์มค้นหาตามปี */}
+        {searchMode === 'year' && (
+          <div className="row mb-3">
+            <div className="col-md-4">
+              <div className="form-group">
+                <label htmlFor="startYear" className="form-label">ปีเริ่มต้น</label>
+                <select
+                  id="startYear"
+                  className="form-select"
+                  value={startYear}
+                  onChange={(e) => setStartYear(e.target.value)}
+                >
+                  {renderYearOptions}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="form-group">
+                <label htmlFor="endYear" className="form-label">ปีสิ้นสุด</label>
+                <select
+                  id="endYear"
+                  className="form-select"
+                  value={endYear}
+                  onChange={(e) => setEndYear(e.target.value)}
+                >
+                  {renderYearOptions}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-4 d-flex align-items-end">
+              <button 
+                type="submit" 
+                className="btn btn-primary w-100"
+                disabled={loading}
+              >
+                {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ฟอร์มค้นหาตามเวลา */}
+        {searchMode === 'time' && (
+          <div className="row mb-3">
+            <div className="col-md-5">
+              <div className="form-group">
+                <label htmlFor="startHour" className="form-label">เวลาเริ่มต้น</label>
+                <select
+                  id="startHour"
+                  className="form-select"
+                  value={startHour}
+                  onChange={(e) => setStartHour(e.target.value)}
+                >
+                  {renderHourOptions}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-5">
+              <div className="form-group">
+                <label htmlFor="endHour" className="form-label">เวลาสิ้นสุด</label>
+                <select
+                  id="endHour"
+                  className="form-select"
+                  value={endHour}
+                  onChange={(e) => setEndHour(e.target.value)}
+                >
+                  {renderHourOptions}
+                </select>
+              </div>
+            </div>
+            <div className="col-md-2 d-flex align-items-end">
+              <button 
+                type="submit" 
+                className="btn btn-primary w-100"
+                disabled={loading}
+              >
+                {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+              </button>
+            </div>
+            <div className="col-12 mt-1">
+              <small className="form-text text-muted">
+                เป็นการค้นหาตามเวลาที่บันทึก เช่น 8:00-17:00 น.
               </small>
             </div>
           </div>
-        </form>
-      )}
+        )}
+
+        {/* ปุ่มรีเซ็ต - แสดงในทุกโหมดยกเว้น quick */}
+        {searchMode !== 'quick' && (
+          <div className="d-flex justify-content-end">
+            <button 
+              type="button" 
+              className="btn btn-outline-secondary"
+              onClick={resetAllForms}
+            >
+              ล้างการค้นหา
+            </button>
+          </div>
+        )}
+      </form>
 
       {/* แสดงเงื่อนไขการค้นหาล่าสุด */}
-      {(lastSearchParams.searchTerm || lastSearchParams.startDate || lastSearchParams.endDate) && (
+      {Object.keys(lastSearchParams).length > 0 && (
         <div className="alert alert-info search-params-alert">
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <strong>เงื่อนไขการค้นหา: </strong>
               {lastSearchParams.searchTerm && <span>ทะเบียน: {lastSearchParams.searchTerm}</span>}
-              {lastSearchParams.startDate && <span> | เริ่ม: {lastSearchParams.startDate}</span>}
-              {lastSearchParams.endDate && <span> | ถึง: {lastSearchParams.endDate}</span>}
+              {lastSearchParams.startDate && <span> | วันที่เริ่มต้น: {lastSearchParams.startDate}</span>}
+              {lastSearchParams.endDate && <span> | วันที่สิ้นสุด: {lastSearchParams.endDate}</span>}
+              {lastSearchParams.startMonth && <span> | เดือนเริ่มต้น: {lastSearchParams.startMonth}</span>}
+              {lastSearchParams.endMonth && <span> | เดือนสิ้นสุด: {lastSearchParams.endMonth}</span>}
+              {lastSearchParams.startYear && <span> | ปีเริ่มต้น: {lastSearchParams.startYear}</span>}
+              {lastSearchParams.endYear && <span> | ปีสิ้นสุด: {lastSearchParams.endYear}</span>}
+              {lastSearchParams.startHour && <span> | เวลาเริ่มต้น: {lastSearchParams.startHour}:00</span>}
+              {lastSearchParams.endHour && <span> | เวลาสิ้นสุด: {lastSearchParams.endHour}:00</span>}
             </div>
             <button 
               className="btn btn-sm btn-outline-secondary" 
-              onClick={loadLatestPlates}
+              onClick={resetAllForms}
             >
               ล้างการค้นหา
             </button>
