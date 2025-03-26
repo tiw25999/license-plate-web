@@ -78,7 +78,7 @@ const PlateManager = () => {
       setEndYear('');
       setLastSearchParams({});
       
-      const data = await plateService.getLatestPlates(5000); // เพิ่มจำนวนเป็น 5000 รายการ
+      const data = await plateService.getLatestPlates(1000); // เพิ่มจำนวนเป็น 1000 รายการ
       
       const platesArray = Array.isArray(data) ? data : [data];
       setAllPlates(platesArray);
@@ -103,7 +103,7 @@ const PlateManager = () => {
   // ค้นหาทะเบียน (แบบใหม่ใช้ endpoint ค้นหา)
   const searchPlatesWithParams = useCallback(async (params = {}) => {
     // สร้าง search params ตามโหมดการค้นหา
-    let searchParams = { ...params, limit: 5000 }; // เพิ่มจำนวนเป็น 5000 รายการ
+    let searchParams = { ...params, limit: 1000 }; // เปลี่ยนเป็น 1000 รายการ
     
     // ถ้าไม่มีค่าการค้นหาเลย ให้โหลดข้อมูลล่าสุด
     if (!Object.values(searchParams).some(value => value)) {
@@ -156,7 +156,7 @@ const PlateManager = () => {
   // การค้นหาแบบทันที (debounced)
   const debouncedSearch = useMemo(
     () => debounce(async (term) => {
-      if (term.length >= 2) { // ต้องพิมพ์อย่างน้อย 2 ตัวอักษร
+      if (term.length >= 1) { // เปลี่ยนจาก 2 ตัวเป็น 1 ตัว
         await searchPlatesWithParams({ searchTerm: term });
       } else if (term === '') {
         // ถ้าลบคำค้นหาจนหมด ให้โหลดข้อมูลล่าสุด
@@ -449,7 +449,9 @@ const PlateManager = () => {
             )}
           </div>
           {searchMode === 'quick' && (
-            <small className="form-text text-muted">พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อเริ่มค้นหาอัตโนมัติ</small>
+            <small className="form-text text-muted">
+              พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อเริ่มค้นหาอัตโนมัติ ระบบจะค้นหาทะเบียนที่มีตัวอักษรหรือตัวเลขที่พิมพ์อยู่ (ไม่จำเป็นต้องขึ้นต้น)
+            </small>
           )}
         </div>
 
@@ -550,8 +552,8 @@ const PlateManager = () => {
                       type="number"
                       id="startYear"
                       className="form-control"
-                      placeholder="เช่น 2023"
-                      min="2000"
+                      placeholder="เช่น 1990"
+                      min="1900"
                       max="2100"
                       value={startYear}
                       onChange={(e) => setStartYear(e.target.value)}
@@ -583,7 +585,7 @@ const PlateManager = () => {
                       id="endYear"
                       className="form-control"
                       placeholder="เช่น 2023"
-                      min="2000"
+                      min="1900"
                       max="2100"
                       value={endYear}
                       onChange={(e) => setEndYear(e.target.value)}
@@ -609,8 +611,8 @@ const PlateManager = () => {
                       type="number"
                       id="startYear"
                       className="form-control"
-                      placeholder="เช่น 2020"
-                      min="2000"
+                      placeholder="เช่น 1990"
+                      min="1900"
                       max="2100"
                       value={startYear}
                       onChange={(e) => setStartYear(e.target.value)}
@@ -625,8 +627,8 @@ const PlateManager = () => {
                       type="number"
                       id="endYear"
                       className="form-control"
-                      placeholder="เช่น 2025"
-                      min="2000"
+                      placeholder="เช่น 2023"
+                      min="1900"
                       max="2100"
                       value={endYear}
                       onChange={(e) => setEndYear(e.target.value)}
