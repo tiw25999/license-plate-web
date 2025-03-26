@@ -201,8 +201,10 @@ const PlateManager = () => {
     // พารามิเตอร์เฉพาะโหมด
     switch (searchMode) {
       case 'date':
-        if (startDate) searchParams.startDate = startDate;
-        if (endDate) searchParams.endDate = endDate;
+        if (startDate) {
+          searchParams.startDate = startDate;
+          searchParams.endDate = startDate; // ใช้วันเดียวกันสำหรับการค้นหา
+        }
         break;
       case 'month':
         if (startMonth) searchParams.startMonth = startMonth;
@@ -255,60 +257,6 @@ const PlateManager = () => {
     setEndHour('');
     loadLatestPlates();
   }, [loadLatestPlates]);
-
-  // ฟังก์ชันสำหรับสร้างตัวเลือกเดือน
-  const renderMonthOptions = useMemo(() => {
-    const options = [];
-    const monthNames = [
-      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-    ];
-    
-    options.push(<option key="month-0" value="">เลือกเดือน</option>);
-    for (let i = 0; i < 12; i++) {
-      options.push(
-        <option key={`month-${i+1}`} value={i+1}>
-          {monthNames[i]} ({i+1})
-        </option>
-      );
-    }
-    
-    return options;
-  }, []);
-
-  // ฟังก์ชันสำหรับสร้างตัวเลือกปี
-  const renderYearOptions = useMemo(() => {
-    const options = [];
-    const currentYear = new Date().getFullYear();
-    const startYear = 2020; // ปีเริ่มต้นที่ต้องการให้แสดง
-    
-    options.push(<option key="year-0" value="">เลือกปี</option>);
-    for (let year = currentYear; year >= startYear; year--) {
-      options.push(
-        <option key={`year-${year}`} value={year}>
-          {year}
-        </option>
-      );
-    }
-    
-    return options;
-  }, []);
-
-  // ฟังก์ชันสำหรับสร้างตัวเลือกชั่วโมง
-  const renderHourOptions = useMemo(() => {
-    const options = [];
-    
-    options.push(<option key="hour-default" value="">เลือกเวลา</option>);
-    for (let hour = 0; hour < 24; hour++) {
-      options.push(
-        <option key={`hour-${hour}`} value={hour}>
-          {hour < 10 ? `0${hour}` : hour}:00
-        </option>
-      );
-    }
-    
-    return options;
-  }, []);
 
   // ตรวจสอบสถานะ API เมื่อโหลดครั้งแรก
   useEffect(() => {
@@ -420,7 +368,7 @@ const PlateManager = () => {
       )}
 
       {/* สลับระหว่างโหมดการค้นหาต่างๆ */}
-      <div className="search-mode-toggle mb-3">
+      <div className="search-tabs mb-3">
         <div className="btn-group w-100">
           <button 
             className={`btn ${searchMode === 'quick' ? 'btn-primary' : 'btn-outline-secondary'}`}
@@ -487,42 +435,27 @@ const PlateManager = () => {
         {/* ฟอร์มค้นหาตามวันที่ */}
         {searchMode === 'date' && (
           <div className="row mb-3">
-            <div className="col-md-5">
-              <div className="form-group">
-                <label htmlFor="startDate" className="form-label">วันที่เริ่มต้น</label>
+            <div className="col-md-8 mx-auto">
+              <div className="input-group">
+                <span className="input-group-text">วันที่</span>
                 <input
                   type="text"
-                  id="startDate"
                   className="form-control"
                   placeholder="DD/MM/YYYY"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setEndDate(e.target.value); // ตั้งวันที่สิ้นสุดเป็นวันเดียวกัน
+                  }}
                 />
+                <button 
+                  type="submit" 
+                  className="btn btn-primary search-button"
+                  disabled={loading}
+                >
+                  {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+                </button>
               </div>
-            </div>
-            <div className="col-md-5">
-              <div className="form-group">
-                <label htmlFor="endDate" className="form-label">วันที่สิ้นสุด</label>
-                <input
-                  type="text"
-                  id="endDate"
-                  className="form-control"
-                  placeholder="DD/MM/YYYY"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-2 d-flex align-items-end">
-              <button 
-                type="submit" 
-                className="btn btn-primary w-100"
-                disabled={loading}
-              >
-                {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
-              </button>
-            </div>
-            <div className="col-12 mt-1">
               <small className="form-text text-muted">รูปแบบ: วัน/เดือน/ปี (เช่น 01/12/2023)</small>
             </div>
           </div>
@@ -531,66 +464,85 @@ const PlateManager = () => {
         {/* ฟอร์มค้นหาตามเดือน */}
         {searchMode === 'month' && (
           <div className="row mb-3">
-            <div className="col-md-3">
-              <div className="form-group">
-                <label htmlFor="startMonth" className="form-label">เดือนเริ่มต้น</label>
-                <select
-                  id="startMonth"
-                  className="form-select"
-                  value={startMonth}
-                  onChange={(e) => setStartMonth(e.target.value)}
-                >
-                  {renderMonthOptions}
-                </select>
+            <div className="col-md-8 mx-auto">
+              <div className="row g-2">
+                <div className="col-md-3">
+                  <div className="form-group">
+                    <label htmlFor="startMonth" className="form-label">เดือนเริ่มต้น (1-12)</label>
+                    <input
+                      type="number"
+                      id="startMonth"
+                      className="form-control"
+                      placeholder="1-12"
+                      min="1"
+                      max="12"
+                      value={startMonth}
+                      onChange={(e) => setStartMonth(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <div className="form-group">
+                    <label htmlFor="startYear" className="form-label">ปีเริ่มต้น</label>
+                    <input
+                      type="number"
+                      id="startYear"
+                      className="form-control"
+                      placeholder="เช่น 2023"
+                      min="2000"
+                      max="2100"
+                      value={startYear}
+                      onChange={(e) => setStartYear(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <div className="form-group">
+                    <label htmlFor="endMonth" className="form-label">เดือนสิ้นสุด (1-12)</label>
+                    <input
+                      type="number"
+                      id="endMonth"
+                      className="form-control"
+                      placeholder="1-12"
+                      min="1"
+                      max="12"
+                      value={endMonth}
+                      onChange={(e) => setEndMonth(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <div className="form-group">
+                    <label htmlFor="endYear" className="form-label">ปีสิ้นสุด</label>
+                    <input
+                      type="number"
+                      id="endYear"
+                      className="form-control"
+                      placeholder="เช่น 2023"
+                      min="2000"
+                      max="2100"
+                      value={endYear}
+                      onChange={(e) => setEndYear(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="startYear" className="form-label">ปีเริ่มต้น</label>
-                <select
-                  id="startYear"
-                  className="form-select"
-                  value={startYear}
-                  onChange={(e) => setStartYear(e.target.value)}
+              <div className="mt-3 d-flex justify-content-center">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary search-button mx-2"
+                  disabled={loading}
                 >
-                  {renderYearOptions}
-                </select>
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="form-group">
-                <label htmlFor="endMonth" className="form-label">เดือนสิ้นสุด</label>
-                <select
-                  id="endMonth"
-                  className="form-select"
-                  value={endMonth}
-                  onChange={(e) => setEndMonth(e.target.value)}
+                  {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-outline-secondary mx-2"
+                  onClick={resetAllForms}
                 >
-                  {renderMonthOptions}
-                </select>
+                  ล้างการค้นหา
+                </button>
               </div>
-            </div>
-            <div className="col-md-2">
-              <div className="form-group">
-                <label htmlFor="endYear" className="form-label">ปีสิ้นสุด</label>
-                <select
-                  id="endYear"
-                  className="form-select"
-                  value={endYear}
-                  onChange={(e) => setEndYear(e.target.value)}
-                >
-                  {renderYearOptions}
-                </select>
-              </div>
-            </div>
-            <div className="col-md-2 d-flex align-items-end">
-              <button 
-                type="submit" 
-                className="btn btn-primary w-100"
-                disabled={loading}
-              >
-                {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
-              </button>
             </div>
           </div>
         )}
@@ -598,40 +550,55 @@ const PlateManager = () => {
         {/* ฟอร์มค้นหาตามปี */}
         {searchMode === 'year' && (
           <div className="row mb-3">
-            <div className="col-md-4">
-              <div className="form-group">
-                <label htmlFor="startYear" className="form-label">ปีเริ่มต้น</label>
-                <select
-                  id="startYear"
-                  className="form-select"
-                  value={startYear}
-                  onChange={(e) => setStartYear(e.target.value)}
-                >
-                  {renderYearOptions}
-                </select>
+            <div className="col-md-8 mx-auto">
+              <div className="row g-2">
+                <div className="col-md-4">
+                  <div className="form-group">
+                    <label htmlFor="startYear" className="form-label">ปีเริ่มต้น</label>
+                    <input
+                      type="number"
+                      id="startYear"
+                      className="form-control"
+                      placeholder="เช่น 2020"
+                      min="2000"
+                      max="2100"
+                      value={startYear}
+                      onChange={(e) => setStartYear(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="form-group">
+                    <label htmlFor="endYear" className="form-label">ปีสิ้นสุด</label>
+                    <input
+                      type="number"
+                      id="endYear"
+                      className="form-control"
+                      placeholder="เช่น 2025"
+                      min="2000"
+                      max="2100"
+                      value={endYear}
+                      onChange={(e) => setEndYear(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="col-md-4">
-              <div className="form-group">
-                <label htmlFor="endYear" className="form-label">ปีสิ้นสุด</label>
-                <select
-                  id="endYear"
-                  className="form-select"
-                  value={endYear}
-                  onChange={(e) => setEndYear(e.target.value)}
+              <div className="mt-3 d-flex justify-content-center">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary search-button mx-2"
+                  disabled={loading}
                 >
-                  {renderYearOptions}
-                </select>
+                  {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-outline-secondary mx-2"
+                  onClick={resetAllForms}
+                >
+                  ล้างการค้นหา
+                </button>
               </div>
-            </div>
-            <div className="col-md-4 d-flex align-items-end">
-              <button 
-                type="submit" 
-                className="btn btn-primary w-100"
-                disabled={loading}
-              >
-                {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
-              </button>
             </div>
           </div>
         )}
@@ -639,59 +606,61 @@ const PlateManager = () => {
         {/* ฟอร์มค้นหาตามเวลา */}
         {searchMode === 'time' && (
           <div className="row mb-3">
-            <div className="col-md-5">
-              <div className="form-group">
-                <label htmlFor="startHour" className="form-label">เวลาเริ่มต้น</label>
-                <select
-                  id="startHour"
-                  className="form-select"
-                  value={startHour}
-                  onChange={(e) => setStartHour(e.target.value)}
+            <div className="col-md-8 mx-auto">
+              <div className="row g-2">
+                <div className="col-md-5">
+                  <div className="form-group">
+                    <label htmlFor="startHour" className="form-label">เวลาเริ่มต้น (0-23)</label>
+                    <input
+                      type="number"
+                      id="startHour"
+                      className="form-control"
+                      placeholder="0-23"
+                      min="0"
+                      max="23"
+                      value={startHour}
+                      onChange={(e) => setStartHour(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-5">
+                  <div className="form-group">
+                    <label htmlFor="endHour" className="form-label">เวลาสิ้นสุด (0-23)</label>
+                    <input
+                      type="number"
+                      id="endHour"
+                      className="form-control"
+                      placeholder="0-23"
+                      min="0"
+                      max="23"
+                      value={endHour}
+                      onChange={(e) => setEndHour(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 d-flex justify-content-center">
+                <button 
+                  type="submit" 
+                  className="btn btn-primary search-button mx-2"
+                  disabled={loading}
                 >
-                  {renderHourOptions}
-                </select>
+                  {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-outline-secondary mx-2"
+                  onClick={resetAllForms}
+                >
+                  ล้างการค้นหา
+                </button>
+              </div>
+              <div className="col-12 mt-1 text-center">
+                <small className="form-text text-muted">
+                  เป็นการค้นหาตามเวลาที่บันทึก เช่น 8-17 สำหรับช่วง 8:00-17:00 น.
+                </small>
               </div>
             </div>
-            <div className="col-md-5">
-              <div className="form-group">
-                <label htmlFor="endHour" className="form-label">เวลาสิ้นสุด</label>
-                <select
-                  id="endHour"
-                  className="form-select"
-                  value={endHour}
-                  onChange={(e) => setEndHour(e.target.value)}
-                >
-                  {renderHourOptions}
-                </select>
-              </div>
-            </div>
-            <div className="col-md-2 d-flex align-items-end">
-              <button 
-                type="submit" 
-                className="btn btn-primary w-100"
-                disabled={loading}
-              >
-                {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
-              </button>
-            </div>
-            <div className="col-12 mt-1">
-              <small className="form-text text-muted">
-                เป็นการค้นหาตามเวลาที่บันทึก เช่น 8:00-17:00 น.
-              </small>
-            </div>
-          </div>
-        )}
-
-        {/* ปุ่มรีเซ็ต - แสดงในทุกโหมดยกเว้น quick */}
-        {searchMode !== 'quick' && (
-          <div className="d-flex justify-content-end">
-            <button 
-              type="button" 
-              className="btn btn-outline-secondary"
-              onClick={resetAllForms}
-            >
-              ล้างการค้นหา
-            </button>
           </div>
         )}
       </form>
