@@ -1,0 +1,79 @@
+.plate-manager .advanced-search-form {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  
+  .plate-manager .search-type-toggle {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+  }
+  
+  .plate-manager .plate-number {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  
+  .plate-manager .pagination-container {
+    font-size: 0.9rem;
+  }
+  
+  .plate-manager .pagination-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+  }
+  
+  .plate-manager .pagination-dots {
+    margin: 0 5px;
+  }
+  
+  .plate-manager .table-container {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 15px;
+  }
+  
+  .plate-manager .search-params-alert {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+  }
+  
+  .plate-manager .api-status {
+    text-align: right;
+  }
+  
+  .plate-manager .api-status-online {
+    color: #198754;
+  }
+  
+  .plate-manager .api-status-offline {
+    color: #dc3545;
+  }
+  
+  .plate-manager .api-status-issue {
+    color: #fd7e14;
+  }
+  
+  .plate-manager .items-per-page select {
+    width: auto;
+    display: inline-block;
+  }
+  
+  @media (max-width: 767px) {
+    .plate-manager .pagination-container {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .plate-manager .pagination-info,
+    .plate-manager .pagination-controls {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+  }
