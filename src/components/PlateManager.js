@@ -1,7 +1,7 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { plateService } from '../services/api';
-import './PlateManager.css'; // เพิ่มไฟล์ CSS ใหม่
+import './PlateManager.css';
 
 const PlateManager = () => {
   const [allPlates, setAllPlates] = useState([]); // เก็บข้อมูลทั้งหมด
@@ -23,20 +23,6 @@ const PlateManager = () => {
   const [advancedSearch, setAdvancedSearch] = useState(false);
   const [lastSearchParams, setLastSearchParams] = useState({});
 
-  // ตรวจสอบสถานะ API เมื่อโหลดครั้งแรก
-  useEffect(() => {
-    const checkApiStatus = async () => {
-      try {
-        const status = await plateService.checkHealth();
-        setApiStatus(status.status === 'ok' ? 'online' : 'issue');
-      } catch (error) {
-        setApiStatus('offline');
-      }
-    };
-    
-    checkApiStatus();
-  }, []);
-
   // อัพเดตข้อมูลที่แสดงตามหน้าปัจจุบัน
   const updateDisplayPlates = useCallback((plates, page) => {
     const startIndex = (page - 1) * itemsPerPage;
@@ -51,29 +37,6 @@ const PlateManager = () => {
     if (plateObj.plate_number) return plateObj.plate_number;
     return JSON.stringify(plateObj);
   }, []);
-
-  // ฟังก์ชัน debounce สำหรับการค้นหา
-  const debounce = (func, delay) => {
-    let debounceTimer;
-    return function(...args) {
-      const context = this;
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => func.apply(context, args), delay);
-    }
-  };
-
-  // การค้นหาแบบทันที (debounced)
-  const debouncedSearch = useMemo(
-    () => debounce(async (term) => {
-      if (term.length >= 2) { // ต้องพิมพ์อย่างน้อย 2 ตัวอักษร
-        await searchPlatesWithParams({ searchTerm: term });
-      } else if (term === '') {
-        // ถ้าลบคำค้นหาจนหมด ให้โหลดข้อมูลล่าสุด
-        loadLatestPlates();
-      }
-    }, 500), 
-    []
-  );
 
   // โหลดรายการทะเบียนล่าสุด
   const loadLatestPlates = useCallback(async () => {
@@ -109,44 +72,8 @@ const PlateManager = () => {
     }
   }, [itemsPerPage, updateDisplayPlates]);
 
-  // ไปหน้าถัดไป
-  const goToNextPage = useCallback(() => {
-    if (currentPage < totalPages) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      updateDisplayPlates(allPlates, nextPage);
-      
-      // เลื่อนขึ้นไปด้านบนของตาราง
-      document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [currentPage, totalPages, allPlates, updateDisplayPlates]);
-
-  // ไปหน้าก่อนหน้า
-  const goToPrevPage = useCallback(() => {
-    if (currentPage > 1) {
-      const prevPage = currentPage - 1;
-      setCurrentPage(prevPage);
-      updateDisplayPlates(allPlates, prevPage);
-      
-      // เลื่อนขึ้นไปด้านบนของตาราง
-      document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [currentPage, allPlates, updateDisplayPlates]);
-
-  // ไปยังหน้าที่ระบุ
-  const goToPage = useCallback((page) => {
-    const pageNum = parseInt(page);
-    if (!isNaN(pageNum) && pageNum > 0 && pageNum <= totalPages) {
-      setCurrentPage(pageNum);
-      updateDisplayPlates(allPlates, pageNum);
-      
-      // เลื่อนขึ้นไปด้านบนของตาราง
-      document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [totalPages, allPlates, updateDisplayPlates]);
-
   // ค้นหาทะเบียน (แบบใหม่ใช้ endpoint ค้นหา)
-  const searchPlatesWithParams = async (params = {}) => {
+  const searchPlatesWithParams = useCallback(async (params = {}) => {
     const searchParams = {
       ...params,
       limit: 500 // จำกัดผลลัพธ์สูงสุด
@@ -188,20 +115,79 @@ const PlateManager = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [itemsPerPage, updateDisplayPlates, loadLatestPlates]);
+
+  // ฟังก์ชัน debounce สำหรับการค้นหา
+  const debounce = useCallback((func, delay) => {
+    let debounceTimer;
+    return function(...args) {
+      const context = this;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => func.apply(context, args), delay);
+    }
+  }, []);
+
+  // การค้นหาแบบทันที (debounced)
+  const debouncedSearch = useMemo(
+    () => debounce(async (term) => {
+      if (term.length >= 2) { // ต้องพิมพ์อย่างน้อย 2 ตัวอักษร
+        await searchPlatesWithParams({ searchTerm: term });
+      } else if (term === '') {
+        // ถ้าลบคำค้นหาจนหมด ให้โหลดข้อมูลล่าสุด
+        loadLatestPlates();
+      }
+    }, 500), 
+    [debounce, searchPlatesWithParams, loadLatestPlates]
+  );
+
+  // ไปหน้าถัดไป
+  const goToNextPage = useCallback(() => {
+    if (currentPage < totalPages) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      updateDisplayPlates(allPlates, nextPage);
+      
+      // เลื่อนขึ้นไปด้านบนของตาราง
+      document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [currentPage, totalPages, allPlates, updateDisplayPlates]);
+
+  // ไปหน้าก่อนหน้า
+  const goToPrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      const prevPage = currentPage - 1;
+      setCurrentPage(prevPage);
+      updateDisplayPlates(allPlates, prevPage);
+      
+      // เลื่อนขึ้นไปด้านบนของตาราง
+      document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [currentPage, allPlates, updateDisplayPlates]);
+
+  // ไปยังหน้าที่ระบุ
+  const goToPage = useCallback((page) => {
+    const pageNum = parseInt(page);
+    if (!isNaN(pageNum) && pageNum > 0 && pageNum <= totalPages) {
+      setCurrentPage(pageNum);
+      updateDisplayPlates(allPlates, pageNum);
+      
+      // เลื่อนขึ้นไปด้านบนของตาราง
+      document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [totalPages, allPlates, updateDisplayPlates]);
 
   // ฟังก์ชันสำหรับค้นหาด้วยฟอร์ม
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = useCallback((e) => {
     e.preventDefault();
     searchPlatesWithParams({
       searchTerm: searchTerm.trim(),
       startDate,
       endDate
     });
-  };
+  }, [searchPlatesWithParams, searchTerm, startDate, endDate]);
 
   // ปรับเปลี่ยนจำนวนรายการต่อหน้า
-  const handleItemsPerPageChange = (e) => {
+  const handleItemsPerPageChange = useCallback((e) => {
     const newItemsPerPage = parseInt(e.target.value);
     setItemsPerPage(newItemsPerPage);
     
@@ -215,7 +201,21 @@ const PlateManager = () => {
     
     // อัพเดตการแสดงผล
     updateDisplayPlates(allPlates, newCurrentPage);
-  };
+  }, [allPlates, currentPage, updateDisplayPlates]);
+
+  // ตรวจสอบสถานะ API เมื่อโหลดครั้งแรก
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      try {
+        const status = await plateService.checkHealth();
+        setApiStatus(status.status === 'ok' ? 'online' : 'issue');
+      } catch (error) {
+        setApiStatus('offline');
+      }
+    };
+    
+    checkApiStatus();
+  }, []);
 
   // เรียกข้อมูลเมื่อโหลดหน้าแรก
   useEffect(() => {
