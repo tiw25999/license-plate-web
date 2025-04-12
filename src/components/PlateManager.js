@@ -152,11 +152,26 @@ const searchPlatesWithParams = useCallback(async (params = {}) => {
     // ตรวจสอบโครงสร้างข้อมูลและแปลงให้อยู่ในรูปแบบที่ถูกต้อง
     let searchResults = Array.isArray(data) ? data : [data];
     
-    // เรียงลำดับข้อมูลตามวันที่ล่าสุดก่อน (ปีปัจจุบันก่อน)
+    // เรียงลำดับข้อมูลตามปีล่าสุดก่อน แต่ภายในปีเดียวกันเรียงวันที่จากน้อยไปมาก
     searchResults.sort((a, b) => {
-      const dateA = a.timestamp ? a.timestamp.split(' ')[0] : '';
-      const dateB = b.timestamp ? b.timestamp.split(' ')[0] : '';
-      return dateB.localeCompare(dateA);
+    if (!a.timestamp || !b.timestamp) return 0;
+  
+    // แยกวันที่และเวลา
+    const [dateA, timeA] = a.timestamp.split(' ');
+    const [dateB, timeB] = b.timestamp.split(' ');
+  
+    // แยกวัน เดือน ปี
+    const [dayA, monthA, yearA] = dateA.split('/').map(Number);
+    const [dayB, monthB, yearB] = dateB.split('/').map(Number);
+  
+    // เรียงตามปีก่อน (จากมากไปน้อย)
+    if (yearA !== yearB) return yearB - yearA;
+  
+    // ถ้าปีเท่ากัน เรียงตามเดือนจากน้อยไปมาก
+    if (monthA !== monthB) return monthA - monthB;
+  
+    // ถ้าเดือนเท่ากัน เรียงตามวันจากน้อยไปมาก
+    return dayA - dayB;
     });
     
     setAllPlates(searchResults);
