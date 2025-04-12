@@ -109,7 +109,10 @@ const PlateManager = () => {
       if (monthA !== monthB) return monthA - monthB;
   
       // ถ้าเดือนเท่ากัน เรียงตามวันจากน้อยไปมาก
-      return dayA - dayB;
+      if (dayA !== dayB) return dayA - dayB;
+  
+      // ถ้าวันเดือนปีเท่ากัน เรียงตามเวลา
+      return timeA.localeCompare(timeB);
       });
       
       setAllPlates(platesArray);
