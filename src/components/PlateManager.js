@@ -86,7 +86,7 @@ const PlateManager = () => {
       setEndYear('');
       setLastSearchParams({});
       
-      const data = await plateService.getLatestPlates(1000); // เพิ่มจำนวนเป็น 1000 รายการ
+      const data = await plateService.getLatestPlates(300); // เพิ่มจำนวนเป็น 1000 รายการ
       
       const platesArray = Array.isArray(data) ? data : [data];
       
@@ -137,7 +137,7 @@ const PlateManager = () => {
   // ค้นหาทะเบียน (แบบใหม่ใช้ endpoint ค้นหา)
 const searchPlatesWithParams = useCallback(async (params = {}) => {
   // สร้าง search params ตามโหมดการค้นหา
-  let searchParams = { ...params, limit: 1000 }; // เปลี่ยนเป็น 1000 รายการ
+  let searchParams = { ...params, limit: 300 }; // เปลี่ยนเป็น 1000 รายการ
   
   // ถ้าไม่มีค่าการค้นหาเลย ให้โหลดข้อมูลล่าสุด
   if (!Object.values(searchParams).some(value => value)) {
