@@ -34,6 +34,14 @@ const PlateManager = () => {
   const [monthRangeComplete, setMonthRangeComplete] = useState(false);
   const [yearRangeComplete, setYearRangeComplete] = useState(false);
 
+  // ฟังก์ชันสำหรับสร้างวันที่ในรูปแบบ DD/MM/YYYY
+  const formatDate = (date) => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   // อัพเดตข้อมูลที่แสดงตามหน้าปัจจุบัน
   const updateDisplayPlates = useCallback((plates, page) => {
     const startIndex = (page - 1) * itemsPerPage;
@@ -62,6 +70,27 @@ const PlateManager = () => {
     setYearRangeComplete(!!startYear && !!endYear);
   }, [startYear, endYear]);
 
+  // ฟังก์ชันสำหรับค้นหาข้อมูลตามช่วงเวลาที่กำหนด
+  const searchLastNDays = useCallback((days) => {
+    const today = new Date();
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - (days - 1)); // -1 เพื่อให้นับรวมวันนี้ด้วย
+    
+    const endDateStr = formatDate(today);
+    const startDateStr = formatDate(pastDate);
+    
+    setStartDate(startDateStr);
+    setEndDate(endDateStr);
+    setSearchMode('advanced');
+    setAdvancedSearchType('date');
+    
+    // เรียกค้นหาอัตโนมัติ
+    searchPlatesWithParams({
+      startDate: startDateStr,
+      endDate: endDateStr
+    });
+  }, []);
+
   // โหลดรายการทะเบียนล่าสุด
   const loadLatestPlates = useCallback(async () => {
     try {
@@ -81,6 +110,14 @@ const PlateManager = () => {
       const data = await plateService.getLatestPlates(1000); // เพิ่มจำนวนเป็น 1000 รายการ
       
       const platesArray = Array.isArray(data) ? data : [data];
+      
+      // เรียงลำดับข้อมูลตามวันที่ล่าสุดก่อน (ปีปัจจุบันก่อน)
+      platesArray.sort((a, b) => {
+        const dateA = a.timestamp ? a.timestamp.split(' ')[0] : '';
+        const dateB = b.timestamp ? b.timestamp.split(' ')[0] : '';
+        return dateB.localeCompare(dateA);
+      });
+      
       setAllPlates(platesArray);
       setTotalRecords(platesArray.length);
       
@@ -120,6 +157,13 @@ const PlateManager = () => {
       
       // ตรวจสอบโครงสร้างข้อมูลและแปลงให้อยู่ในรูปแบบที่ถูกต้อง
       let searchResults = Array.isArray(data) ? data : [data];
+      
+      // เรียงลำดับข้อมูลตามวันที่ล่าสุดก่อน (ปีปัจจุบันก่อน)
+      searchResults.sort((a, b) => {
+        const dateA = a.timestamp ? a.timestamp.split(' ')[0] : '';
+        const dateB = b.timestamp ? b.timestamp.split(' ')[0] : '';
+        return dateB.localeCompare(dateA);
+      });
       
       setAllPlates(searchResults);
       setTotalRecords(searchResults.length);
@@ -405,6 +449,35 @@ const PlateManager = () => {
           </small>
         </div>
       )}
+
+      {/* ปุ่มค้นหาช่วงเวลาล่าสุด */}
+      <div className="quick-date-search mb-3">
+        <div className="d-flex justify-content-center mb-3">
+          <div className="btn-group">
+            <button 
+              className="btn btn-outline-info"
+              onClick={() => searchLastNDays(3)}
+              disabled={loading}
+            >
+              <i className="bi bi-calendar-check"></i> 3 วันล่าสุด
+            </button>
+            <button 
+              className="btn btn-outline-info"
+              onClick={() => searchLastNDays(7)}
+              disabled={loading}
+            >
+              <i className="bi bi-calendar-week"></i> 7 วันล่าสุด
+            </button>
+            <button 
+              className="btn btn-outline-info"
+              onClick={() => searchLastNDays(30)}
+              disabled={loading}
+            >
+              <i className="bi bi-calendar-month"></i> 30 วันล่าสุด
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* ปุ่มสลับระหว่างโหมดค้นหาด่วนและค้นหาขั้นสูง */}
       <div className="search-mode-toggle mb-3">
@@ -704,7 +777,7 @@ const PlateManager = () => {
           {/* ตัวเลือกการแสดงผล */}
           <div className="d-flex justify-content-between align-items-center mb-2">
             <div className="total-records">
-              พบทั้งหมด <strong>{totalRecords}</strong> รายการ
+              แสดง <strong>{totalRecords}</strong> รายการ
             </div>
             <div className="items-per-page">
               <label className="me-2">แสดง:</label>
