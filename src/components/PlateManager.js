@@ -92,9 +92,27 @@ const PlateManager = () => {
       
       // เรียงลำดับข้อมูลตามวันที่ล่าสุดก่อน (ปีปัจจุบันก่อน)
       platesArray.sort((a, b) => {
-        const dateA = a.timestamp ? a.timestamp.split(' ')[0] : '';
-        const dateB = b.timestamp ? b.timestamp.split(' ')[0] : '';
-        return dateB.localeCompare(dateA);
+      if (!a.timestamp || !b.timestamp) return 0;
+  
+      // แยกวันที่และเวลา
+      const [dateA, timeA] = a.timestamp.split(' ');
+      const [dateB, timeB] = b.timestamp.split(' ');
+  
+      // แยกวัน เดือน ปี
+      const [dayA, monthA, yearA] = dateA.split('/').map(Number);
+      const [dayB, monthB, yearB] = dateB.split('/').map(Number);
+  
+      // เรียงตามปีก่อน
+      if (yearA !== yearB) return yearB - yearA;
+  
+      // ถ้าปีเท่ากัน เรียงตามเดือน
+      if (monthA !== monthB) return monthB - monthA;
+  
+      // ถ้าเดือนเท่ากัน เรียงตามวัน
+      if (dayA !== dayB) return dayB - dayA;
+  
+      // ถ้าวันเท่ากัน เรียงตามเวลา
+      return timeB?.localeCompare(timeA || '') || 0;
       });
       
       setAllPlates(platesArray);
