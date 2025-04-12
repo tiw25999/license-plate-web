@@ -117,37 +117,56 @@ const PlateManager = () => {
   }, [itemsPerPage, updateDisplayPlates]);
 
   // ค้นหาทะเบียน (แบบใหม่ใช้ endpoint ค้นหา)
-  const searchPlatesWithParams = useCallback(async (params = {}) => {
-    // สร้าง search params ตามโหมดการค้นหา
-    let searchParams = { ...params, limit: 1000 }; // เปลี่ยนเป็น 1000 รายการ
+const searchPlatesWithParams = useCallback(async (params = {}) => {
+  // สร้าง search params ตามโหมดการค้นหา
+  let searchParams = { ...params, limit: 1000 }; // เปลี่ยนเป็น 1000 รายการ
+  
+  // ถ้าไม่มีค่าการค้นหาเลย ให้โหลดข้อมูลล่าสุด
+  if (!Object.values(searchParams).some(value => value)) {
+    return loadLatestPlates();
+  }
+  
+  try {
+    setLoading(true);
+    setError(null);
+    // เก็บพารามิเตอร์การค้นหาล่าสุด
+    setLastSearchParams(searchParams);
     
-    // ถ้าไม่มีค่าการค้นหาเลย ให้โหลดข้อมูลล่าสุด
-    if (!Object.values(searchParams).some(value => value)) {
-      return loadLatestPlates();
-    }
+    const data = await plateService.searchPlates(searchParams);
     
-    try {
-      setLoading(true);
-      setError(null);
-      // เก็บพารามิเตอร์การค้นหาล่าสุด
-      setLastSearchParams(searchParams);
-      
-      const data = await plateService.searchPlates(searchParams);
-      
-      // ตรวจสอบโครงสร้างข้อมูลและแปลงให้อยู่ในรูปแบบที่ถูกต้อง
-      let searchResults = Array.isArray(data) ? data : [data];
-      
-      // เรียงลำดับข้อมูลตามวันที่ล่าสุดก่อน (ปีปัจจุบันก่อน)
-      searchResults.sort((a, b) => {
-        const dateA = a.timestamp ? a.timestamp.split(' ')[0] : '';
-        const dateB = b.timestamp ? b.timestamp.split(' ')[0] : '';
-        return dateB.localeCompare(dateA);
-      });
-      
-      setAllPlates(searchResults);
-      setTotalRecords(searchResults.length);
+    // ตรวจสอบโครงสร้างข้อมูลและแปลงให้อยู่ในรูปแบบที่ถูกต้อง
+    let searchResults = Array.isArray(data) ? data : [data];
+    
+    // เรียงลำดับข้อมูลตามวันที่ล่าสุดก่อน (ปีปัจจุบันก่อน)
+    searchResults.sort((a, b) => {
+      const dateA = a.timestamp ? a.timestamp.split(' ')[0] : '';
+      const dateB = b.timestamp ? b.timestamp.split(' ')[0] : '';
+      return dateB.localeCompare(dateA);
+    });
+    
+    setAllPlates(searchResults);
+    setTotalRecords(searchResults.length);
+    
+    // คำนวณจำนวนหน้าทั้งหมด
+    const pages = Math.ceil(searchResults.length / itemsPerPage);
+    setTotalPages(Math.max(1, pages));
+    
+    // เซ็ตข้อมูลสำหรับหน้าแรก
+    setCurrentPage(1);
+    updateDisplayPlates(searchResults, 1);
+  } catch (err) {
+    setError(err.message || 'เกิดข้อผิดพลาดในการค้นหา');
+    setAllPlates([]);
+    setDisplayPlates([]);
+    setTotalRecords(0);
+    setTotalPages(1);
+    setCurrentPage(1);
+  } finally {
+    setLoading(false);
+  }
+}, [itemsPerPage, updateDisplayPlates, loadLatestPlates]);
 
-      // ฟังก์ชันสำหรับค้นหาข้อมูลตามช่วงเวลาที่กำหนด
+// ฟังก์ชันสำหรับค้นหาข้อมูลตามช่วงเวลาที่กำหนด
 const searchLastNDays = useCallback((days) => {
   const today = new Date();
   const pastDate = new Date();
@@ -166,26 +185,7 @@ const searchLastNDays = useCallback((days) => {
     startDate: startDateStr,
     endDate: endDateStr
   });
-}, [searchPlatesWithParams]); // เพิ่ม searchPlatesWithParams ใน dependency array
-      
-      // คำนวณจำนวนหน้าทั้งหมด
-      const pages = Math.ceil(searchResults.length / itemsPerPage);
-      setTotalPages(Math.max(1, pages));
-      
-      // เซ็ตข้อมูลสำหรับหน้าแรก
-      setCurrentPage(1);
-      updateDisplayPlates(searchResults, 1);
-    } catch (err) {
-      setError(err.message || 'เกิดข้อผิดพลาดในการค้นหา');
-      setAllPlates([]);
-      setDisplayPlates([]);
-      setTotalRecords(0);
-      setTotalPages(1);
-      setCurrentPage(1);
-    } finally {
-      setLoading(false);
-    }
-  }, [itemsPerPage, updateDisplayPlates, loadLatestPlates]);
+}, [searchPlatesWithParams]);
 
   // ฟังก์ชัน debounce สำหรับการค้นหา
   const debounce = useCallback((func, delay) => {
