@@ -90,7 +90,7 @@ const PlateManager = () => {
       
       const platesArray = Array.isArray(data) ? data : [data];
       
-      // เรียงลำดับข้อมูลตามวันที่ล่าสุดก่อน (ปีปัจจุบันก่อน)
+      // เรียงลำดับข้อมูลตามปีล่าสุดก่อน แต่ภายในปีเดียวกันเรียงวันที่จากน้อยไปมาก
       platesArray.sort((a, b) => {
       if (!a.timestamp || !b.timestamp) return 0;
   
@@ -102,17 +102,14 @@ const PlateManager = () => {
       const [dayA, monthA, yearA] = dateA.split('/').map(Number);
       const [dayB, monthB, yearB] = dateB.split('/').map(Number);
   
-      // เรียงตามปีก่อน
+      // เรียงตามปีก่อน (จากมากไปน้อย)
       if (yearA !== yearB) return yearB - yearA;
   
-      // ถ้าปีเท่ากัน เรียงตามเดือน
-      if (monthA !== monthB) return monthB - monthA;
+      // ถ้าปีเท่ากัน เรียงตามเดือนจากน้อยไปมาก
+      if (monthA !== monthB) return monthA - monthB;
   
-      // ถ้าเดือนเท่ากัน เรียงตามวัน
-      if (dayA !== dayB) return dayB - dayA;
-  
-      // ถ้าวันเท่ากัน เรียงตามเวลา
-      return timeB?.localeCompare(timeA || '') || 0;
+      // ถ้าเดือนเท่ากัน เรียงตามวันจากน้อยไปมาก
+      return dayA - dayB;
       });
       
       setAllPlates(platesArray);
