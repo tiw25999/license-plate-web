@@ -70,27 +70,6 @@ const PlateManager = () => {
     setYearRangeComplete(!!startYear && !!endYear);
   }, [startYear, endYear]);
 
-// ฟังก์ชันสำหรับค้นหาข้อมูลตามช่วงเวลาที่กำหนด
-const searchLastNDays = useCallback((days) => {
-  const today = new Date();
-  const pastDate = new Date();
-  pastDate.setDate(today.getDate() - (days - 1)); // -1 เพื่อให้นับรวมวันนี้ด้วย
-  
-  const endDateStr = formatDate(today);
-  const startDateStr = formatDate(pastDate);
-  
-  setStartDate(startDateStr);
-  setEndDate(endDateStr);
-  setSearchMode('advanced');
-  setAdvancedSearchType('date');
-  
-  // เรียกค้นหาอัตโนมัติ
-  searchPlatesWithParams({
-    startDate: startDateStr,
-    endDate: endDateStr
-  });
-}, [searchPlatesWithParams]); // เพิ่ม searchPlatesWithParams ใน dependency array
-
   // โหลดรายการทะเบียนล่าสุด
   const loadLatestPlates = useCallback(async () => {
     try {
@@ -167,6 +146,27 @@ const searchLastNDays = useCallback((days) => {
       
       setAllPlates(searchResults);
       setTotalRecords(searchResults.length);
+
+      // ฟังก์ชันสำหรับค้นหาข้อมูลตามช่วงเวลาที่กำหนด
+const searchLastNDays = useCallback((days) => {
+  const today = new Date();
+  const pastDate = new Date();
+  pastDate.setDate(today.getDate() - (days - 1)); // -1 เพื่อให้นับรวมวันนี้ด้วย
+  
+  const endDateStr = formatDate(today);
+  const startDateStr = formatDate(pastDate);
+  
+  setStartDate(startDateStr);
+  setEndDate(endDateStr);
+  setSearchMode('advanced');
+  setAdvancedSearchType('date');
+  
+  // เรียกค้นหาอัตโนมัติ
+  searchPlatesWithParams({
+    startDate: startDateStr,
+    endDate: endDateStr
+  });
+}, [searchPlatesWithParams]); // เพิ่ม searchPlatesWithParams ใน dependency array
       
       // คำนวณจำนวนหน้าทั้งหมด
       const pages = Math.ceil(searchResults.length / itemsPerPage);
