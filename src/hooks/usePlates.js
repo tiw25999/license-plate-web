@@ -13,8 +13,8 @@ export const usePlates = () => {
   const [apiStatus, setApiStatus] = useState(null);
   const [lastSearchParams, setLastSearchParams] = useState({});
 
-  // ฟังก์ชันสำหรับเรียงลำดับข้อมูล
-  const sortPlatesByDate = useCallback((plates) => {
+  // เรียงลำดับข้อมูลตามปีล่าสุด เดือนล่าสุด และวันที่ล่าสุดก่อน
+    const sortPlatesByDate = useCallback((plates) => {
     return [...plates].sort((a, b) => {
       if (!a.timestamp || !b.timestamp) return 0;
   
@@ -29,16 +29,16 @@ export const usePlates = () => {
       // เรียงตามปีก่อน (จากมากไปน้อย)
       if (yearA !== yearB) return yearB - yearA;
   
-      // ถ้าปีเท่ากัน เรียงตามเดือนจากน้อยไปมาก
-      if (monthA !== monthB) return monthA - monthB;
+      // ถ้าปีเท่ากัน เรียงตามเดือนจากมากไปน้อย (เปลี่ยนจากเดิม)
+      if (monthA !== monthB) return monthB - monthA;
   
-      // ถ้าเดือนเท่ากัน เรียงตามวันจากน้อยไปมาก
-      if (dayA !== dayB) return dayA - dayB;
+      // ถ้าเดือนเท่ากัน เรียงตามวันจากมากไปน้อย (เปลี่ยนจากเดิม)
+      if (dayA !== dayB) return dayB - dayA;
   
-      // ถ้าวันเดือนปีเท่ากัน เรียงตามเวลา
-      return timeA.localeCompare(timeB);
-    });
-  }, []);
+      // ถ้าวันเดือนปีเท่ากัน เรียงตามเวลาจากมากไปน้อย (เปลี่ยนจากเดิม)
+      return timeB.localeCompare(timeA);
+        });
+    }, []);
 
   // โหลดรายการทะเบียนล่าสุด
   const loadLatestPlates = useCallback(async () => {
