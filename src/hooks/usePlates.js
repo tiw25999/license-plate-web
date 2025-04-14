@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { plateService } from '../services/api';
-import { formatDate } from '../utils/dateUtils';
 
 /**
  * Custom hook สำหรับจัดการข้อมูลทะเบียนรถและการค้นหา
@@ -13,46 +12,47 @@ export const usePlates = () => {
   const [apiStatus, setApiStatus] = useState(null);
   const [lastSearchParams, setLastSearchParams] = useState({});
 
-  // เรียงลำดับข้อมูลตามปีล่าสุด เดือนล่าสุด และวันที่ล่าสุดก่อน
-    const sortPlatesByDate = useCallback((plates) => {
-    return [...plates].sort((a, b) => {
-      if (!a.timestamp || !b.timestamp) return 0;
-  
-      // แยกวันที่และเวลา
-      const [dateA, timeA] = a.timestamp.split(' ');
-      const [dateB, timeB] = b.timestamp.split(' ');
-  
-      // แยกวัน เดือน ปี
-      const [dayA, monthA, yearA] = dateA.split('/').map(Number);
-      const [dayB, monthB, yearB] = dateB.split('/').map(Number);
-  
-      // เรียงตามปีก่อน (จากมากไปน้อย)
-      if (yearA !== yearB) return yearB - yearA;
-  
-      // ถ้าปีเท่ากัน เรียงตามเดือนจากมากไปน้อย (เปลี่ยนจากเดิม)
-      if (monthA !== monthB) return monthB - monthA;
-  
-      // ถ้าเดือนเท่ากัน เรียงตามวันจากมากไปน้อย (เปลี่ยนจากเดิม)
-      if (dayA !== dayB) return dayB - dayA;
-  
-      // ถ้าวันเดือนปีเท่ากัน เรียงตามเวลาจากมากไปน้อย (เปลี่ยนจากเดิม)
-      return timeB.localeCompare(timeA);
-        });
-    }, []);
+  // ฟังก์ชันสำหรับแสดงเลขทะเบียน
+  const getPlateNumber = useCallback((plateObj) => {
+    if (!plateObj) return '-';
+    if (plateObj.plate) return plateObj.plate;
+    if (plateObj.plate_number) return plateObj.plate_number;
+    return JSON.stringify(plateObj);
+  }, []);
 
-  // โหลดรายการทะเบียนล่าสุด
+  // ฟังก์ชันสำหรับโหลดรายการทะเบียนล่าสุด
   const loadLatestPlates = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // รีเซ็ตค่าการค้นหา
+      setSearchTerm('');
+      setStartDate('');
+      setEndDate('');
+      setStartMonth('');
+      setEndMonth('');
+      setStartYear('');
+      setEndYear('');
       setLastSearchParams({});
       
       const data = await plateService.getLatestPlates(300);
-      const platesArray = Array.isArray(data) ? data : [data];
-      const sortedPlates = sortPlatesByDate(platesArray);
       
-      setAllPlates(sortedPlates);
-      return sortedPlates;
+      const platesArray = Array.isArray(data) ? data : [data];
+      
+      // ไม่ต้องเรียงลำดับเพราะ backend ส่งมาเรียงแล้ว
+      setAllPlates(platesArray);
+      setTotalRecords(platesArray.length);
+      
+      // คำนวณจำนวนหน้าทั้งหมด
+      const pages = Math.ceil(platesArray.length / itemsPerPage);
+      setTotalPages(pages || 1);
+      
+      // เซ็ตข้อมูลสำหรับหน้าแรก
+      setCurrentPage(1);
+      updateDisplayPlates(platesArray, 1);
+      
+      return platesArray;
     } catch (err) {
       const errorMsg = 'ไม่สามารถโหลดข้อมูลทะเบียนได้: ' + (err.message || err);
       setError(errorMsg);
@@ -61,7 +61,7 @@ export const usePlates = () => {
     } finally {
       setLoading(false);
     }
-  }, [sortPlatesByDate]);
+  }, [itemsPerPage, updateDisplayPlates]);
 
   // ค้นหาทะเบียนด้วยพารามิเตอร์
   const searchPlatesWithParams = useCallback(async (params = {}) => {
@@ -79,20 +79,34 @@ export const usePlates = () => {
       setLastSearchParams(searchParams);
       
       const data = await plateService.searchPlates(searchParams);
-      const searchResults = Array.isArray(data) ? data : [data];
-      const sortedResults = sortPlatesByDate(searchResults);
       
-      setAllPlates(sortedResults);
-      return sortedResults;
+      const searchResults = Array.isArray(data) ? data : [data];
+      
+      // ไม่ต้องเรียงลำดับเพราะ backend ส่งมาเรียงแล้ว
+      setAllPlates(searchResults);
+      setTotalRecords(searchResults.length);
+      
+      // คำนวณจำนวนหน้าทั้งหมด
+      const pages = Math.ceil(searchResults.length / itemsPerPage);
+      setTotalPages(Math.max(1, pages));
+      
+      // เซ็ตข้อมูลสำหรับหน้าแรก
+      setCurrentPage(1);
+      updateDisplayPlates(searchResults, 1);
+      
+      return searchResults;
     } catch (err) {
-      const errorMsg = err.message || 'เกิดข้อผิดพลาดในการค้นหา';
-      setError(errorMsg);
+      setError(err.message || 'เกิดข้อผิดพลาดในการค้นหา');
       setAllPlates([]);
+      setDisplayPlates([]);
+      setTotalRecords(0);
+      setTotalPages(1);
+      setCurrentPage(1);
       return [];
     } finally {
       setLoading(false);
     }
-  }, [loadLatestPlates, sortPlatesByDate]);
+  }, [itemsPerPage, updateDisplayPlates, loadLatestPlates]);
 
   // ค้นหาทะเบียนตามช่วงเวลา
   const searchLastNDays = useCallback((days) => {
@@ -103,6 +117,11 @@ export const usePlates = () => {
     const endDateStr = formatDate(today);
     const startDateStr = formatDate(pastDate);
     
+    setStartDate(startDateStr);
+    setEndDate(endDateStr);
+    setSearchMode('advanced');
+    
+    // เรียกค้นหาอัตโนมัติ
     return searchPlatesWithParams({
       startDate: startDateStr,
       endDate: endDateStr
@@ -128,14 +147,6 @@ export const usePlates = () => {
   useEffect(() => {
     loadLatestPlates();
   }, [loadLatestPlates]);
-
-  // ฟังก์ชันสำหรับแสดงเลขทะเบียน
-  const getPlateNumber = useCallback((plateObj) => {
-    if (!plateObj) return '-';
-    if (plateObj.plate) return plateObj.plate;
-    if (plateObj.plate_number) return plateObj.plate_number;
-    return JSON.stringify(plateObj);
-  }, []);
 
   return {
     allPlates,

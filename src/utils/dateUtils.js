@@ -67,3 +67,20 @@ export const formatDate = (date) => {
   export const isYearRangeComplete = (startYear, endYear) => {
     return Boolean(startYear && endYear);
   };
+  
+  /**
+   * แปลงวันที่จากรูปแบบข้อความเป็น Date object
+   * @param {string} dateString วันที่ในรูปแบบ DD/MM/YYYY
+   * @returns {Date|null} Date object หรือ null ถ้าไม่สามารถแปลงได้
+   */
+  export const parseDateString = (dateString) => {
+    if (!dateString) return null;
+    
+    try {
+      const [day, month, year] = dateString.split('/').map(Number);
+      return new Date(year, month - 1, day);
+    } catch (error) {
+      console.error('Error parsing date string:', error);
+      return null;
+    }
+  };
