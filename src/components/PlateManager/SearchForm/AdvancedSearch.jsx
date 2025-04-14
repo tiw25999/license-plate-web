@@ -2,35 +2,21 @@ import PropTypes from 'prop-types';
 import React, { useState } from 'react';
 
 /**
- * Component ค้นหาขั้นสูงแบบรวม
+ * Component ค้นหาขั้นสูงแบบรวมในฟอร์มเดียว
  */
 const AdvancedSearch = ({ 
   initialSearchTerm,
   initialStartDate,
   initialEndDate,
-  initialStartMonth,
-  initialEndMonth,
-  initialStartYear,
-  initialEndYear,
   onSearch,
   onReset,
   loading
 }) => {
   // State สำหรับการค้นหา
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
-  
-  // State สำหรับการค้นหาตามวันที่
+  // State สำหรับช่วงวันที่
   const [startDate, setStartDate] = useState(initialStartDate || '');
   const [endDate, setEndDate] = useState(initialEndDate || '');
-  
-  // State สำหรับการค้นหาตามเดือน
-  const [startMonth, setStartMonth] = useState(initialStartMonth || '');
-  const [endMonth, setEndMonth] = useState(initialEndMonth || '');
-  
-  // State สำหรับการค้นหาตามปี
-  const [startYear, setStartYear] = useState(initialStartYear || '');
-  const [endYear, setEndYear] = useState(initialEndYear || '');
-  
   // State สำหรับข้อผิดพลาด
   const [error, setError] = useState(null);
 
@@ -41,43 +27,18 @@ const AdvancedSearch = ({
     // สร้างพารามิเตอร์การค้นหา
     let searchParams = {};
     
-    // พารามิเตอร์ทั่วไป - ทะเบียนรถ
+    // พารามิเตอร์ทะเบียนรถ
     if (searchTerm.trim()) {
       searchParams.searchTerm = searchTerm.trim();
     }
     
-    // ตรวจสอบและเพิ่มพารามิเตอร์วันที่
+    // พารามิเตอร์ช่วงวันที่
     if (startDate && endDate) {
       searchParams.startDate = startDate;
       searchParams.endDate = endDate;
     } else if (startDate || endDate) {
       // ถ้ามีแค่อันใดอันหนึ่ง ให้แจ้งเตือน
-      setError('หากต้องการค้นหาตามช่วงวันที่ กรุณาระบุทั้งวันที่เริ่มต้นและวันที่สิ้นสุด');
-      return;
-    }
-    
-    // ตรวจสอบและเพิ่มพารามิเตอร์เดือน/ปี
-    if ((startMonth || endMonth) && (startYear && endYear)) {
-      if (startMonth && endMonth) {
-        searchParams.startMonth = startMonth;
-        searchParams.endMonth = endMonth;
-        searchParams.startYear = startYear;
-        searchParams.endYear = endYear;
-      } else {
-        setError('หากต้องการค้นหาตามช่วงเดือน กรุณาระบุทั้งเดือนเริ่มต้นและเดือนสิ้นสุด');
-        return;
-      }
-    } else if ((startMonth || endMonth) && (!startYear || !endYear)) {
-      setError('หากต้องการค้นหาตามช่วงเดือน กรุณาระบุทั้งปีเริ่มต้นและปีสิ้นสุด');
-      return;
-    }
-    
-    // ตรวจสอบปีโดยไม่มีเดือน
-    if (!startMonth && !endMonth && startYear && endYear) {
-      searchParams.startYear = startYear;
-      searchParams.endYear = endYear;
-    } else if ((!startMonth && !endMonth) && (startYear || endYear)) {
-      setError('หากต้องการค้นหาตามช่วงปี กรุณาระบุทั้งปีเริ่มต้นและปีสิ้นสุด');
+      setError('กรุณาระบุทั้งวันที่เริ่มต้นและวันที่สิ้นสุด');
       return;
     }
     
@@ -99,10 +60,6 @@ const AdvancedSearch = ({
     setSearchTerm('');
     setStartDate('');
     setEndDate('');
-    setStartMonth('');
-    setEndMonth('');
-    setStartYear('');
-    setEndYear('');
     setError(null);
     onReset();
   };
@@ -110,131 +67,58 @@ const AdvancedSearch = ({
   return (
     <div className="advanced-search-container">
       {/* ช่องค้นหาทะเบียน */}
-      <div className="mb-3">
+      <div className="mb-4">
+        <label htmlFor="searchTerm" className="form-label fw-bold mb-2">ค้นหาเลขทะเบียน</label>
         <div className="input-group">
-          <span className="input-group-text">ทะเบียนรถ</span>
+          <span className="input-group-text"><i className="bi bi-search"></i></span>
           <input
             type="text"
+            id="searchTerm"
             className="form-control"
             placeholder="ป้อนทะเบียนที่ต้องการค้นหา..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <small className="text-muted">สามารถค้นหาด้วยเลขทะเบียนบางส่วนได้</small>
       </div>
 
-      {/* ค้นหาตามวันที่ */}
-      <div className="card mb-3">
+      {/* ค้นหาตามช่วงวันที่ */}
+      <div className="card mb-4">
         <div className="card-header bg-light">
-          <i className="bi bi-calendar-date me-2"></i> ค้นหาตามวันที่
+          <i className="bi bi-calendar me-2"></i> ค้นหาตามช่วงวันที่
         </div>
         <div className="card-body">
           <div className="row">
-            <div className="col-md-6">
-              <div className="form-group mb-3">
-                <label htmlFor="startDate" className="form-label">วันที่เริ่มต้น</label>
-                <input
-                  type="text"
-                  id="startDate"
-                  className="form-control"
-                  placeholder="DD/MM/YYYY"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="startDate" className="form-label">วันที่เริ่มต้น</label>
+              <input
+                type="text"
+                id="startDate"
+                className="form-control"
+                placeholder="DD/MM/YYYY"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
             </div>
-            <div className="col-md-6">
-              <div className="form-group mb-3">
-                <label htmlFor="endDate" className="form-label">วันที่สิ้นสุด</label>
-                <input
-                  type="text"
-                  id="endDate"
-                  className="form-control"
-                  placeholder="DD/MM/YYYY"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="endDate" className="form-label">วันที่สิ้นสุด</label>
+              <input
+                type="text"
+                id="endDate"
+                className="form-control"
+                placeholder="DD/MM/YYYY"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
             </div>
           </div>
-          <small className="text-muted">
-            รูปแบบ: วัน/เดือน/ปี (เช่น 01/12/2023) - หากต้องการค้นหาตามวันที่ ต้องระบุทั้งวันที่เริ่มต้นและสิ้นสุด
-          </small>
-        </div>
-      </div>
-
-      {/* ค้นหาตามเดือน/ปี */}
-      <div className="card mb-3">
-        <div className="card-header bg-light">
-          <i className="bi bi-calendar-month me-2"></i> ค้นหาตามเดือน/ปี
-        </div>
-        <div className="card-body">
-          <div className="row">
-            <div className="col-md-3 mb-3">
-              <div className="form-group">
-                <label htmlFor="startMonth" className="form-label">เดือนเริ่มต้น</label>
-                <input
-                  type="number"
-                  id="startMonth"
-                  className="form-control"
-                  placeholder="1-12"
-                  min="1"
-                  max="12"
-                  value={startMonth}
-                  onChange={(e) => setStartMonth(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-3 mb-3">
-              <div className="form-group">
-                <label htmlFor="endMonth" className="form-label">เดือนสิ้นสุด</label>
-                <input
-                  type="number"
-                  id="endMonth"
-                  className="form-control"
-                  placeholder="1-12"
-                  min="1"
-                  max="12"
-                  value={endMonth}
-                  onChange={(e) => setEndMonth(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-3 mb-3">
-              <div className="form-group">
-                <label htmlFor="startYear" className="form-label">ปีเริ่มต้น</label>
-                <input
-                  type="number"
-                  id="startYear"
-                  className="form-control"
-                  placeholder="เช่น 2023"
-                  min="1900"
-                  max="2100"
-                  value={startYear}
-                  onChange={(e) => setStartYear(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="col-md-3 mb-3">
-              <div className="form-group">
-                <label htmlFor="endYear" className="form-label">ปีสิ้นสุด</label>
-                <input
-                  type="number"
-                  id="endYear"
-                  className="form-control"
-                  placeholder="เช่น 2023"
-                  min="1900"
-                  max="2100"
-                  value={endYear}
-                  onChange={(e) => setEndYear(e.target.value)}
-                />
-              </div>
-            </div>
+          <div className="form-text">
+            รูปแบบ: วัน/เดือน/ปี (เช่น 10/01/2002 - 31/12/2003)
           </div>
-          <small className="text-muted">
-            สำหรับค้นหาตามเดือน: ต้องระบุทั้งเดือน (1-12) และปีให้ครบทั้งเริ่มต้นและสิ้นสุด<br/>
-            สำหรับค้นหาตามปี: หากต้องการค้นหาเฉพาะปี ไม่ต้องระบุเดือน แต่ต้องระบุปีเริ่มต้นและสิ้นสุดให้ครบ
-          </small>
+          <div className="form-text text-muted">
+            ช่วงวันที่จะถูกใช้ในการค้นหาทะเบียนรถที่บันทึกในช่วงเวลาดังกล่าว
+          </div>
         </div>
       </div>
 
@@ -244,22 +128,31 @@ const AdvancedSearch = ({
       )}
 
       {/* ปุ่มค้นหาและล้างการค้นหา */}
-      <div className="row">
+      <div className="row mt-4">
         <div className="col-12 d-flex justify-content-center">
           <button 
             type="button" 
-            className="btn btn-primary search-button mx-2"
+            className="btn btn-primary btn-lg me-2 px-4"
             onClick={handleSubmit}
             disabled={loading}
           >
-            {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                กำลังค้นหา...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-search me-2"></i> ค้นหา
+              </>
+            )}
           </button>
           <button 
             type="button" 
-            className="btn btn-outline-secondary mx-2"
+            className="btn btn-outline-secondary btn-lg px-4"
             onClick={handleReset}
           >
-            ล้างการค้นหา
+            <i className="bi bi-x-circle me-2"></i> ล้างการค้นหา
           </button>
         </div>
       </div>
@@ -271,10 +164,6 @@ AdvancedSearch.propTypes = {
   initialSearchTerm: PropTypes.string,
   initialStartDate: PropTypes.string,
   initialEndDate: PropTypes.string,
-  initialStartMonth: PropTypes.string,
-  initialEndMonth: PropTypes.string,
-  initialStartYear: PropTypes.string,
-  initialEndYear: PropTypes.string,
   onSearch: PropTypes.func.isRequired,
   onReset: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired
