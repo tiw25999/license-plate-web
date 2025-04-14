@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { plateService } from '../services/api';
+import { formatDate } from '../utils/dateUtils';
 
 /**
  * Custom hook สำหรับจัดการข้อมูลทะเบียนรถและการค้นหา
@@ -7,10 +8,34 @@ import { plateService } from '../services/api';
 export const usePlates = () => {
   // State
   const [allPlates, setAllPlates] = useState([]); 
+  const [displayPlates, setDisplayPlates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [apiStatus, setApiStatus] = useState(null);
   const [lastSearchParams, setLastSearchParams] = useState({});
+  
+  // ตัวแปรสำหรับการค้นหา
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [startMonth, setStartMonth] = useState('');
+  const [endMonth, setEndMonth] = useState('');
+  const [startYear, setStartYear] = useState('');
+  const [endYear, setEndYear] = useState('');
+  const [searchMode, setSearchMode] = useState('quick');
+  
+  // ตัวแปรสำหรับการแบ่งหน้า
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  // อัพเดตข้อมูลที่แสดงตามหน้าปัจจุบัน
+  const updateDisplayPlates = useCallback((plates, page) => {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setDisplayPlates(plates.slice(startIndex, endIndex));
+  }, [itemsPerPage]);
 
   // ฟังก์ชันสำหรับแสดงเลขทะเบียน
   const getPlateNumber = useCallback((plateObj) => {
@@ -150,10 +175,33 @@ export const usePlates = () => {
 
   return {
     allPlates,
+    displayPlates,
     loading,
     error,
     apiStatus,
     lastSearchParams,
+    searchTerm,
+    startDate,
+    endDate,
+    startMonth,
+    endMonth,
+    startYear,
+    endYear,
+    searchMode,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    totalRecords,
+    setSearchTerm,
+    setStartDate,
+    setEndDate,
+    setStartMonth,
+    setEndMonth,
+    setStartYear,
+    setEndYear,
+    setSearchMode,
+    setItemsPerPage,
+    updateDisplayPlates,
     loadLatestPlates,
     searchPlatesWithParams,
     searchLastNDays,
