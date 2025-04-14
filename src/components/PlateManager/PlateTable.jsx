@@ -17,6 +17,22 @@ const PlateTable = ({
     return <div className="alert alert-info">ไม่พบข้อมูลทะเบียน</div>;
   }
 
+  // ฟังก์ชันสำหรับแยกวันที่และเวลา
+  const splitDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return { date: '-', time: '-' };
+    
+    // แยกวันที่และเวลา
+    const parts = dateTimeStr.split(' ');
+    if (parts.length === 2) {
+      return {
+        date: parts[0],  // "DD/MM/YYYY"
+        time: parts[1]   // "HH:MM:SS"
+      };
+    }
+    
+    return { date: dateTimeStr, time: '-' };
+  };
+
   return (
     <>
       {/* ตัวเลือกการแสดงผล */}
@@ -43,19 +59,24 @@ const PlateTable = ({
           <table className="table table-striped table-hover">
             <thead className="table-dark">
               <tr>
-                <th className="text-center" style={{ width: '10%' }}>ลำดับ</th>
-                <th style={{ width: '40%' }}>เลขทะเบียน</th>
-                <th style={{ width: '50%' }}>วันที่บันทึก</th>
+                <th className="text-center" style={{ width: '8%' }}>ลำดับ</th>
+                <th style={{ width: '32%' }}>เลขทะเบียน</th>
+                <th style={{ width: '30%' }}>วันที่บันทึก</th>
+                <th style={{ width: '30%' }}>เวลาที่บันทึก</th>
               </tr>
             </thead>
             <tbody>
-              {plates.map((plate, index) => (
-                <tr key={index}>
-                  <td className="text-center">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                  <td className="plate-number">{getPlateNumber(plate)}</td>
-                  <td>{plate.timestamp}</td>
-                </tr>
-              ))}
+              {plates.map((plate, index) => {
+                const { date, time } = splitDateTime(plate.timestamp);
+                return (
+                  <tr key={index}>
+                    <td className="text-center">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                    <td className="plate-number">{getPlateNumber(plate)}</td>
+                    <td>{date}</td>
+                    <td>{time}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
