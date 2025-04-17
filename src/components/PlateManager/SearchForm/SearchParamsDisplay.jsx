@@ -18,6 +18,8 @@ const SearchParamsDisplay = ({ params, onReset }) => {
           {params.searchTerm && <span>ทะเบียน: {params.searchTerm}</span>}
           {params.startDate && <span> | วันที่เริ่มต้น: {params.startDate}</span>}
           {params.endDate && <span> | วันที่สิ้นสุด: {params.endDate}</span>}
+          {params.startHour && <span> | เวลาเริ่มต้น: {params.startHour}:00</span>}
+          {params.endHour && <span> | เวลาสิ้นสุด: {params.endHour}:00</span>}
           {params.startMonth && <span> | เดือนเริ่มต้น: {params.startMonth}</span>}
           {params.endMonth && <span> | เดือนสิ้นสุด: {params.endMonth}</span>}
           {params.startYear && <span> | ปีเริ่มต้น: {params.startYear}</span>}

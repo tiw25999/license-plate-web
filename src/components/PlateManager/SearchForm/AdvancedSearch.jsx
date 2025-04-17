@@ -8,6 +8,8 @@ const AdvancedSearch = ({
   initialSearchTerm,
   initialStartDate,
   initialEndDate,
+  initialStartHour,
+  initialEndHour,
   onSearch,
   onReset,
   loading
@@ -17,6 +19,9 @@ const AdvancedSearch = ({
   // State สำหรับช่วงวันที่
   const [startDate, setStartDate] = useState(initialStartDate || '');
   const [endDate, setEndDate] = useState(initialEndDate || '');
+  // State สำหรับช่วงเวลา
+  const [startHour, setStartHour] = useState(initialStartHour || '');
+  const [endHour, setEndHour] = useState(initialEndHour || '');
   // State สำหรับข้อผิดพลาด
   const [error, setError] = useState(null);
 
@@ -42,6 +47,30 @@ const AdvancedSearch = ({
       return;
     }
     
+    // พารามิเตอร์ช่วงเวลา (ถ้ามีการระบุ)
+    if (startHour && endHour) {
+      // ตรวจสอบความถูกต้องของช่วงเวลา
+      const startHourNum = parseInt(startHour);
+      const endHourNum = parseInt(endHour);
+      
+      if (isNaN(startHourNum) || isNaN(endHourNum) || startHourNum < 0 || startHourNum > 23 || endHourNum < 0 || endHourNum > 23) {
+        setError('ช่วงเวลาต้องเป็นตัวเลข 0-23');
+        return;
+      }
+      
+      if (startHourNum > endHourNum) {
+        setError('เวลาเริ่มต้นต้องน้อยกว่าหรือเท่ากับเวลาสิ้นสุด');
+        return;
+      }
+      
+      searchParams.startHour = startHour;
+      searchParams.endHour = endHour;
+    } else if (startHour || endHour) {
+      // ถ้ามีแค่อันใดอันหนึ่ง ให้แจ้งเตือน
+      setError('กรุณาระบุทั้งเวลาเริ่มต้นและเวลาสิ้นสุด');
+      return;
+    }
+    
     // ตรวจสอบว่ามีพารามิเตอร์การค้นหาอย่างน้อย 1 อย่าง
     if (Object.keys(searchParams).length === 0) {
       setError('กรุณาระบุเงื่อนไขการค้นหาอย่างน้อย 1 รายการ');
@@ -60,6 +89,8 @@ const AdvancedSearch = ({
     setSearchTerm('');
     setStartDate('');
     setEndDate('');
+    setStartHour('');
+    setEndHour('');
     setError(null);
     onReset();
   };
@@ -116,8 +147,45 @@ const AdvancedSearch = ({
           <div className="form-text">
             รูปแบบ: วัน/เดือน/ปี (เช่น 10/01/2002 - 31/12/2003)
           </div>
-          <div className="form-text text-muted">
-            ช่วงวันที่จะถูกใช้ในการค้นหาทะเบียนรถที่บันทึกในช่วงเวลาดังกล่าว
+        </div>
+      </div>
+
+      {/* ค้นหาตามช่วงเวลา */}
+      <div className="card mb-4">
+        <div className="card-header bg-light">
+          <i className="bi bi-clock me-2"></i> ค้นหาตามช่วงเวลา (ชั่วโมง)
+        </div>
+        <div className="card-body">
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label htmlFor="startHour" className="form-label">เวลาเริ่มต้น</label>
+              <input
+                type="number"
+                id="startHour"
+                className="form-control"
+                placeholder="0-23"
+                min="0"
+                max="23"
+                value={startHour}
+                onChange={(e) => setStartHour(e.target.value)}
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="endHour" className="form-label">เวลาสิ้นสุด</label>
+              <input
+                type="number"
+                id="endHour"
+                className="form-control"
+                placeholder="0-23"
+                min="0"
+                max="23"
+                value={endHour}
+                onChange={(e) => setEndHour(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="form-text">
+            กรอกชั่วโมงในรูปแบบ 24 ชั่วโมง (0-23) ถ้าไม่กรอกจะค้นหาทุกช่วงเวลา
           </div>
         </div>
       </div>
@@ -164,6 +232,8 @@ AdvancedSearch.propTypes = {
   initialSearchTerm: PropTypes.string,
   initialStartDate: PropTypes.string,
   initialEndDate: PropTypes.string,
+  initialStartHour: PropTypes.string,
+  initialEndHour: PropTypes.string,
   onSearch: PropTypes.func.isRequired,
   onReset: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired
