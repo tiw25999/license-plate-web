@@ -54,6 +54,15 @@ function App() {
                 </AdminRoute>
               } 
             />
+            {/* ใช้ PrivateRoute สำหรับหน้าที่ต้องการการเข้าสู่ระบบ */}
+            <Route 
+              path="/protected-page" 
+              element={
+                <PrivateRoute>
+                  <PlateManager />
+                </PrivateRoute>
+              } 
+            />
           </Routes>
         </div>
       </Router>
