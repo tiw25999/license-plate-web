@@ -15,28 +15,31 @@ const AdminPage = () => {
   
   const { isAdmin } = useAuth();
   
+  // useEffect ต้องอยู่ที่ระดับบนสุด ไม่อยู่ภายใต้เงื่อนไข
+  useEffect(() => {
+    // ย้ายเงื่อนไขเข้ามาในนี้แทน
+    if (isAdmin()) {
+      const fetchUsers = async () => {
+        try {
+          setLoading(true);
+          setError('');
+          const data = await authService.fetchAllUsers();
+          setUsers(data);
+        } catch (err) {
+          setError('ไม่สามารถโหลดข้อมูลผู้ใช้ได้: ' + (err.message || ''));
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchUsers();
+    }
+  }, [isAdmin]);
+  
   // ถ้าไม่ใช่ admin ให้ redirect ไปหน้าหลัก
   if (!isAdmin()) {
     return <Navigate to="/" replace />;
   }
-  
-  // โหลดข้อมูลผู้ใช้ทั้งหมด
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const data = await authService.fetchAllUsers();
-        setUsers(data);
-      } catch (err) {
-        setError('ไม่สามารถโหลดข้อมูลผู้ใช้ได้: ' + (err.message || ''));
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchUsers();
-  }, []);
   
   // อัพเดท role ของผู้ใช้
   const handleUpdateRole = async () => {
@@ -122,28 +125,58 @@ const AdminPage = () => {
           </div>
           
           {/* Modal แก้ไขสิทธิ์ */}
-{selectedUser && (
-  <div className="modal show d-block" tabIndex="-1" role="dialog" aria-labelledby="edit-role-modal-title" aria-modal="true">
-    <div className="modal-dialog" role="document">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h5 className="modal-title" id="edit-role-modal-title">แก้ไขสิทธิ์ผู้ใช้</h5>
-          <button 
-            type="button" 
-            className="btn-close" 
-            onClick={() => setSelectedUser(null)}
-            aria-label="ปิด"
-          ></button>
-        </div>
-        
-        {/* ส่วนอื่นๆ ของ Modal เหมือนเดิม */}
-      </div>
-    </div>
-    
-    {/* Backdrop */}
-    <div className="modal-backdrop show"></div>
-  </div>
-)}
+          {selectedUser && (
+            <div className="modal show d-block" tabIndex="-1" role="dialog" aria-labelledby="edit-role-modal-title" aria-modal="true">
+              <div className="modal-dialog" role="document">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title" id="edit-role-modal-title">แก้ไขสิทธิ์ผู้ใช้</h5>
+                    <button 
+                      type="button" 
+                      className="btn-close" 
+                      onClick={() => setSelectedUser(null)}
+                      aria-label="ปิด"
+                    ></button>
+                  </div>
+                  <div className="modal-body">
+                    <p>กำหนดสิทธิ์ให้กับ: <strong>{selectedUser.email}</strong></p>
+                    
+                    <div className="mb-3">
+                      <label className="form-label">สิทธิ์</label>
+                      <select 
+                        className="form-select"
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                      >
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary"
+                      onClick={() => setSelectedUser(null)}
+                    >
+                      ยกเลิก
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-primary"
+                      onClick={handleUpdateRole}
+                      disabled={loading}
+                    >
+                      {loading ? 'กำลังบันทึก...' : 'บันทึก'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Backdrop */}
+              <div className="modal-backdrop show"></div>
+            </div>
+          )}
         </>
       )}
     </div>
