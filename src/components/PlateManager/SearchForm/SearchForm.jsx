@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { plateService } from '../../services/api';
 import AdvancedSearch from './AdvancedSearch';
 import QuickDateSearch from './QuickDateSearch';
 import QuickSearch from './QuickSearch';
@@ -11,6 +12,9 @@ import SearchParamsDisplay from './SearchParamsDisplay';
 const SearchForm = ({
   searchTerm,
   onSearchTermChange,
+  province,
+  idCamera,
+  cameraName,
   lastSearchParams,
   loading,
   onSearch,
@@ -19,7 +23,35 @@ const SearchForm = ({
   onSearchLastNDays
 }) => {
   // State สำหรับโหมดการค้นหา
-  const [searchMode, setSearchMode] = useState('quick'); // 'quick', 'advanced'
+  const [searchMode, setSearchMode] = useState('quick');
+  
+  // State สำหรับรายการจังหวัดและกล้อง
+  const [provinces, setProvinces] = useState([]);
+  const [cameras, setCameras] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+
+  // โหลดรายการจังหวัดและกล้อง
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        setLoadingOptions(true);
+        
+        // โหลดรายการจังหวัด
+        const provincesData = await plateService.getProvinces();
+        setProvinces(provincesData);
+        
+        // โหลดรายการกล้อง
+        const camerasData = await plateService.getCameras();
+        setCameras(camerasData);
+      } catch (error) {
+        console.error('Error loading options:', error);
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+    
+    fetchOptions();
+  }, []);
 
   return (
     <>
@@ -59,12 +91,12 @@ const SearchForm = ({
         ) : (
           <AdvancedSearch 
             initialSearchTerm={searchTerm}
-            initialStartDate={lastSearchParams.startDate || ''}
-            initialEndDate={lastSearchParams.endDate || ''}
-            initialStartMonth={lastSearchParams.startMonth || ''}
-            initialEndMonth={lastSearchParams.endMonth || ''}
-            initialStartYear={lastSearchParams.startYear || ''}
-            initialEndYear={lastSearchParams.endYear || ''}
+            initialProvince={province}
+            initialIdCamera={idCamera}
+            initialCameraName={cameraName}
+            provinces={provinces}
+            cameras={cameras}
+            loadingOptions={loadingOptions}
             onSearch={onSearch}
             onReset={onReset}
             loading={loading}
@@ -84,6 +116,9 @@ const SearchForm = ({
 SearchForm.propTypes = {
   searchTerm: PropTypes.string.isRequired,
   onSearchTermChange: PropTypes.func.isRequired,
+  province: PropTypes.string,
+  idCamera: PropTypes.string,
+  cameraName: PropTypes.string,
   lastSearchParams: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
   onSearch: PropTypes.func.isRequired,

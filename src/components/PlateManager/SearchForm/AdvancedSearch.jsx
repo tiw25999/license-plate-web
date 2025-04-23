@@ -10,6 +10,12 @@ const AdvancedSearch = ({
   initialEndDate,
   initialStartHour,
   initialEndHour,
+  initialProvince,
+  initialIdCamera,
+  initialCameraName,
+  provinces = [],
+  cameras = [],
+  loadingOptions = false,
   onSearch,
   onReset,
   loading
@@ -22,6 +28,10 @@ const AdvancedSearch = ({
   // State สำหรับช่วงเวลา
   const [startHour, setStartHour] = useState(initialStartHour || '');
   const [endHour, setEndHour] = useState(initialEndHour || '');
+  // State สำหรับจังหวัดและกล้อง
+  const [province, setProvince] = useState(initialProvince || '');
+  const [idCamera, setIdCamera] = useState(initialIdCamera || '');
+  const [cameraName, setCameraName] = useState(initialCameraName || '');
   // State สำหรับข้อผิดพลาด
   const [error, setError] = useState(null);
 
@@ -71,6 +81,11 @@ const AdvancedSearch = ({
       return;
     }
     
+    // พารามิเตอร์จังหวัดและกล้อง
+    if (province) searchParams.province = province;
+    if (idCamera) searchParams.id_camera = idCamera;
+    if (cameraName) searchParams.camera_name = cameraName;
+    
     // ตรวจสอบว่ามีพารามิเตอร์การค้นหาอย่างน้อย 1 อย่าง
     if (Object.keys(searchParams).length === 0) {
       setError('กรุณาระบุเงื่อนไขการค้นหาอย่างน้อย 1 รายการ');
@@ -91,6 +106,9 @@ const AdvancedSearch = ({
     setEndDate('');
     setStartHour('');
     setEndHour('');
+    setProvince('');
+    setIdCamera('');
+    setCameraName('');
     setError(null);
     onReset();
   };
@@ -112,6 +130,83 @@ const AdvancedSearch = ({
           />
         </div>
         <small className="text-muted">สามารถค้นหาด้วยเลขทะเบียนบางส่วนได้</small>
+      </div>
+
+      {/* ค้นหาตามจังหวัด */}
+      <div className="card mb-4">
+        <div className="card-header bg-light">
+          <i className="bi bi-geo-alt me-2"></i> ค้นหาตามจังหวัด
+        </div>
+        <div className="card-body">
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label htmlFor="province" className="form-label">จังหวัด</label>
+              {loadingOptions ? (
+                <div className="form-control text-center py-2">
+                  <div className="spinner-border spinner-border-sm text-secondary" role="status">
+                    <span className="visually-hidden">กำลังโหลด...</span>
+                  </div>
+                </div>
+              ) : (
+                <select
+                  id="province"
+                  className="form-select"
+                  value={province}
+                  onChange={(e) => setProvince(e.target.value)}
+                >
+                  <option value="">-- เลือกจังหวัด --</option>
+                  {provinces.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ค้นหาตามกล้อง */}
+      <div className="card mb-4">
+        <div className="card-header bg-light">
+          <i className="bi bi-camera me-2"></i> ค้นหาตามกล้อง
+        </div>
+        <div className="card-body">
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label htmlFor="idCamera" className="form-label">รหัสกล้อง</label>
+              {loadingOptions ? (
+                <div className="form-control text-center py-2">
+                  <div className="spinner-border spinner-border-sm text-secondary" role="status">
+                    <span className="visually-hidden">กำลังโหลด...</span>
+                  </div>
+                </div>
+              ) : (
+                <select
+                  id="idCamera"
+                  className="form-select"
+                  value={idCamera}
+                  onChange={(e) => setIdCamera(e.target.value)}
+                >
+                  <option value="">-- เลือกรหัสกล้อง --</option>
+                  {cameras.map((cam) => (
+                    <option key={cam.id_camera} value={cam.id_camera}>{cam.id_camera}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="cameraName" className="form-label">ชื่อกล้อง</label>
+              <input
+                type="text"
+                id="cameraName"
+                className="form-control"
+                placeholder="ป้อนชื่อกล้องที่ต้องการค้นหา..."
+                value={cameraName}
+                onChange={(e) => setCameraName(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ค้นหาตามช่วงวันที่ */}
@@ -145,7 +240,7 @@ const AdvancedSearch = ({
             </div>
           </div>
           <div className="form-text">
-            รูปแบบ: วัน/เดือน/ปี (เช่น 10/01/2002 - 31/12/2003)
+            รูปแบบ: วัน/เดือน/ปี (เช่น 10/01/2023 - 31/12/2023)
           </div>
         </div>
       </div>
@@ -234,6 +329,12 @@ AdvancedSearch.propTypes = {
   initialEndDate: PropTypes.string,
   initialStartHour: PropTypes.string,
   initialEndHour: PropTypes.string,
+  initialProvince: PropTypes.string,
+  initialIdCamera: PropTypes.string,
+  initialCameraName: PropTypes.string,
+  provinces: PropTypes.array,
+  cameras: PropTypes.array,
+  loadingOptions: PropTypes.bool,
   onSearch: PropTypes.func.isRequired,
   onReset: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired

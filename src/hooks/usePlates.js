@@ -152,6 +152,46 @@ export const usePlates = () => {
       endDate: endDateStr
     });
   }, [searchPlatesWithParams]);
+  
+  // เพิ่มทะเบียนใหม่
+  const addPlate = useCallback(async (plateNumber, province, idCamera, cameraName) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      await plateService.addPlate(plateNumber, province, idCamera, cameraName);
+      
+      // โหลดข้อมูลใหม่
+      await loadLatestPlates();
+      
+      return true;
+    } catch (err) {
+      setError(err.message || 'ไม่สามารถเพิ่มทะเบียนได้');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadLatestPlates]);
+  
+  // ลบทะเบียน
+  const deletePlate = useCallback(async (plateId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      await plateService.deletePlate(plateId);
+      
+      // โหลดข้อมูลใหม่
+      await loadLatestPlates();
+      
+      return true;
+    } catch (err) {
+      setError(err.message || 'ไม่สามารถลบทะเบียนได้');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadLatestPlates]);
 
   // ตรวจสอบสถานะ API
   const checkApiStatus = useCallback(async () => {
@@ -205,6 +245,10 @@ export const usePlates = () => {
     loadLatestPlates,
     searchPlatesWithParams,
     searchLastNDays,
-    getPlateNumber
+    getPlateNumber,
+    addPlate,     // เพิ่มฟังก์ชันนี้
+    deletePlate   // เพิ่มฟังก์ชันนี้
   };
 };
+
+export default usePlates;

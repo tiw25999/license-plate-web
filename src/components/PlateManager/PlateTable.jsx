@@ -10,7 +10,9 @@ const PlateTable = ({
   itemsPerPage,
   getPlateNumber,
   totalRecords,
-  onItemsPerPageChange 
+  onItemsPerPageChange,
+  canDelete = false,
+  onDelete
 }) => {
   // ถ้าไม่มีข้อมูล ไม่ต้องแสดงตาราง
   if (!plates || plates.length === 0) {
@@ -59,10 +61,14 @@ const PlateTable = ({
           <table className="table table-striped table-hover">
             <thead className="table-dark">
               <tr>
-                <th className="text-center" style={{ width: '8%' }}>ลำดับ</th>
-                <th style={{ width: '32%' }}>เลขทะเบียน</th>
-                <th style={{ width: '30%' }}>วันที่บันทึก</th>
-                <th style={{ width: '30%' }}>เวลาที่บันทึก</th>
+                <th className="text-center" style={{ width: '5%' }}>ลำดับ</th>
+                <th style={{ width: '15%' }}>เลขทะเบียน</th>
+                <th style={{ width: '12%' }}>จังหวัด</th>
+                <th style={{ width: '12%' }}>วันที่บันทึก</th>
+                <th style={{ width: '12%' }}>เวลาที่บันทึก</th>
+                <th style={{ width: '12%' }}>รหัสกล้อง</th>
+                <th style={{ width: '15%' }}>ชื่อกล้อง</th>
+                {canDelete && <th style={{ width: '8%' }}>จัดการ</th>}
               </tr>
             </thead>
             <tbody>
@@ -72,8 +78,22 @@ const PlateTable = ({
                   <tr key={index}>
                     <td className="text-center">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                     <td className="plate-number">{getPlateNumber(plate)}</td>
+                    <td>{plate.province || '-'}</td>
                     <td>{date}</td>
                     <td>{time}</td>
+                    <td>{plate.id_camera || '-'}</td>
+                    <td>{plate.camera_name || '-'}</td>
+                    {canDelete && (
+                      <td>
+                        <button 
+                          className="btn btn-sm btn-danger"
+                          onClick={() => onDelete(plate.id)}
+                          title="ลบรายการนี้"
+                        >
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -91,7 +111,9 @@ PlateTable.propTypes = {
   itemsPerPage: PropTypes.number.isRequired,
   getPlateNumber: PropTypes.func.isRequired,
   totalRecords: PropTypes.number.isRequired,
-  onItemsPerPageChange: PropTypes.func.isRequired
+  onItemsPerPageChange: PropTypes.func.isRequired,
+  canDelete: PropTypes.bool,
+  onDelete: PropTypes.func
 };
 
 export default PlateTable;

@@ -13,9 +13,12 @@ const SearchParamsDisplay = ({ params, onReset }) => {
   return (
     <div className="alert alert-info search-params-alert">
       <div className="d-flex justify-content-between align-items-center">
-        <div>
+        <div className="search-params-text">
           <strong>เงื่อนไขการค้นหา: </strong>
           {params.searchTerm && <span>ทะเบียน: {params.searchTerm}</span>}
+          {params.province && <span> | จังหวัด: {params.province}</span>}
+          {params.id_camera && <span> | รหัสกล้อง: {params.id_camera}</span>}
+          {params.camera_name && <span> | ชื่อกล้อง: {params.camera_name}</span>}
           {params.startDate && <span> | วันที่เริ่มต้น: {params.startDate}</span>}
           {params.endDate && <span> | วันที่สิ้นสุด: {params.endDate}</span>}
           {params.startHour && <span> | เวลาเริ่มต้น: {params.startHour}:00</span>}

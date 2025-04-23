@@ -13,24 +13,52 @@ const apiClient = axios.create({
   timeout: 10000,
 });
 
+// เพิ่ม interceptor สำหรับแนบ token ไปกับทุก request
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // เพิ่ม interceptor สำหรับจัดการความผิดพลาด
 apiClient.interceptors.response.use(
   response => response,
   error => {
     console.error('API Error:', error);
+    
     // ถ้ามี response กลับมา แสดงว่าเป็น HTTP error
     if (error.response) {
+      if (error.response.status === 401) {
+        // Token หมดอายุหรือไม่ถูกต้อง
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject({ 
+          ...error, 
+          message: 'กรุณาเข้าสู่ระบบใหม่' 
+        });
+      }
+      
       if (error.response.status === 404) {
         return Promise.reject({ 
           ...error, 
           message: 'ไม่พบข้อมูลที่ค้นหา' 
         });
       }
+      
       return Promise.reject({ 
         ...error, 
         message: `เกิดข้อผิดพลาด: ${error.response.status} ${error.response.statusText}` 
       });
     }
+    
     // ถ้าเป็น network error หรือ timeout
     if (error.code === 'ECONNABORTED') {
       return Promise.reject({ 
@@ -38,6 +66,7 @@ apiClient.interceptors.response.use(
         message: 'การเชื่อมต่อหมดเวลา กรุณาลองใหม่อีกครั้ง' 
       });
     }
+    
     return Promise.reject(error);
   }
 );
@@ -55,7 +84,7 @@ export const plateService = {
     }
   },
 
-  // ค้นหาทะเบียนตามเลขทะเบียนแบบเฉพาะเจาะจง (ใช้ endpoint เดิม)
+  // ค้นหาทะเบียนตามเลขทะเบียนแบบเฉพาะเจาะจง
   searchPlateExact: async (plateNumber) => {
     try {
       const response = await apiClient.get(`/plates/get_plates?plate_number=${plateNumber}`);
@@ -66,7 +95,7 @@ export const plateService = {
     }
   },
 
-  // ค้นหาทะเบียนแบบละเอียด (ใช้ endpoint ใหม่)
+  // ค้นหาทะเบียนแบบละเอียด
   searchPlates: async (params) => {
     try {
       const { 
@@ -79,6 +108,9 @@ export const plateService = {
         endYear,
         startHour,
         endHour,
+        province,
+        id_camera,
+        camera_name,
         limit = 500 
       } = params;
       
@@ -100,12 +132,68 @@ export const plateService = {
       if (startHour) queryParams.append('start_hour', startHour);
       if (endHour) queryParams.append('end_hour', endHour);
       
+      // ข้อมูลเพิ่มเติม
+      if (province) queryParams.append('province', province);
+      if (id_camera) queryParams.append('id_camera', id_camera);
+      if (camera_name) queryParams.append('camera_name', camera_name);
+      
       if (limit) queryParams.append('limit', limit);
       
       const response = await apiClient.get(`/plates/search?${queryParams.toString()}`);
       return response.data;
     } catch (error) {
       console.error('Error searching plates:', error);
+      throw error;
+    }
+  },
+  
+  // เพิ่มทะเบียนใหม่ (ต้อง login ก่อน)
+  addPlate: async (plateNumber, province, id_camera, camera_name) => {
+    try {
+      const response = await apiClient.post('/plates/add_plate', null, {
+        params: {
+          plate_number: plateNumber,
+          province,
+          id_camera,
+          camera_name
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error adding plate:', error);
+      throw error;
+    }
+  },
+  
+  // ลบทะเบียน (เฉพาะ admin)
+  deletePlate: async (plateId) => {
+    try {
+      const response = await apiClient.delete(`/plates/delete_plate/${plateId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting plate:', error);
+      throw error;
+    }
+  },
+  
+  // ดึงรายชื่อจังหวัดทั้งหมด
+  getProvinces: async () => {
+    try {
+      const response = await apiClient.get('/plates/get_provinces');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provinces:', error);
+      throw error;
+    }
+  },
+  
+  // ดึงรายการกล้องทั้งหมด
+  getCameras: async () => {
+    try {
+      const response = await apiClient.get('/plates/get_cameras');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching cameras:', error);
       throw error;
     }
   },
@@ -121,3 +209,5 @@ export const plateService = {
     }
   }
 };
+
+export default plateService;
