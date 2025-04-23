@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
-import { plateService } from '../../services/api';
+import plateService from '../../services/api';
 import AdvancedSearch from './AdvancedSearch';
 import QuickDateSearch from './QuickDateSearch';
 import QuickSearch from './QuickSearch';
