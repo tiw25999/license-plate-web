@@ -10,28 +10,35 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ตรวจสอบสถานะการเข้าสู่ระบบเมื่อโหลดแอป
   useEffect(() => {
     const checkAuth = async () => {
       try {
         setLoading(true);
         
-        // ตรวจสอบว่ามี token และข้อมูลผู้ใช้ใน localStorage หรือไม่
-        if (authService.isAuthenticated()) {
-          const userData = authService.getCurrentUser();
-          
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setUser(null);
+          return;
+        }
+        
+        // ถ้ามี token ให้ดึงข้อมูลผู้ใช้จาก localStorage ก่อน
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+        
+        try {
+          // ตรวจสอบความถูกต้องของ token กับ server
+          const userData = await authService.fetchCurrentUser();
           if (userData) {
-            // ตรวจสอบความถูกต้องของ token กับ server
-            try {
-              await authService.fetchCurrentUser();
-              setUser(authService.getCurrentUser());
-            } catch (err) {
-              // ถ้า token ไม่ถูกต้อง ให้ logout
-              authService.logout();
-              setUser(null);
-              setError('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-            }
+            setUser(userData);
+            // อัปเดตข้อมูลใน localStorage
+            localStorage.setItem('user', JSON.stringify(userData));
           }
+        } catch (err) {
+          console.error("Error validating token:", err);
+          // ถ้าเกิดข้อผิดพลาด ให้ใช้ข้อมูลจาก localStorage ต่อไป
+          // ไม่ต้อง logout ผู้ใช้
         }
       } catch (err) {
         setError(err.message);
@@ -44,13 +51,28 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ฟังก์ชัน login
-  const login = async (username, password) => {
+const login = async (username, password) => {
     try {
       setLoading(true);
       setError(null);
       
-      await authService.login(username, password);
-      setUser(authService.getCurrentUser());
+      const response = await authService.login(username, password);
+      
+      // บันทึก token ลงใน localStorage
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: response.id,
+        username: response.username,
+        email: response.email,
+        role: response.role
+      }));
+      
+      setUser({
+        id: response.id,
+        username: response.username,
+        email: response.email,
+        role: response.role
+      });
       
       return true;
     } catch (err) {
