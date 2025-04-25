@@ -10,7 +10,7 @@ const AuthStatus = () => {
       {user ? (
         <>
           <span className="me-2">
-            สวัสดี, {user.email}
+            สวัสดี, {user.username}
             {isAdmin() && <span className="badge bg-danger ms-1">Admin</span>}
           </span>
           

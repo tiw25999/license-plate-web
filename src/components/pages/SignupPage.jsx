@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Alert from '../common/Alert';
 
 const SignupPage = () => {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,7 +37,7 @@ const SignupPage = () => {
     setLoading(true);
     
     try {
-      const success = await signup(email, password, confirmPassword);
+      const success = await signup(username, password, confirmPassword, email);
       if (success) {
         navigate('/');
       }
@@ -60,14 +61,25 @@ const SignupPage = () => {
               
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label htmlFor="email" className="form-label">อีเมล</label>
+                  <label htmlFor="username" className="form-label">ชื่อผู้ใช้</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="mb-3">
+                  <label htmlFor="email" className="form-label">อีเมล (ไม่บังคับ)</label>
                   <input
                     type="email"
                     className="form-control"
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required
                   />
                 </div>
                 

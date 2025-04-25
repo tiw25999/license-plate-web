@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Alert from '../common/Alert';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ const LoginPage = () => {
     setLoading(true);
     
     try {
-      const success = await login(email, password);
+      const success = await login(username, password);
       if (success) {
         navigate('/');
       }
@@ -47,13 +47,13 @@ const LoginPage = () => {
               
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label htmlFor="email" className="form-label">อีเมล</label>
+                  <label htmlFor="username" className="form-label">ชื่อผู้ใช้</label>
                   <input
-                    type="email"
+                    type="text"
                     className="form-control"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>

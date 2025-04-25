@@ -60,7 +60,7 @@ const AdminPage = () => {
         return user;
       }));
       
-      setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.email} เป็น ${selectedRole} เรียบร้อยแล้ว`);
+      setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.username} เป็น ${selectedRole} เรียบร้อยแล้ว`);
       setSelectedUser(null);
     } catch (err) {
       setError('ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้: ' + (err.message || ''));
@@ -87,6 +87,7 @@ const AdminPage = () => {
             <table className="table table-striped">
               <thead className="table-dark">
                 <tr>
+                  <th>ชื่อผู้ใช้</th>
                   <th>อีเมล</th>
                   <th>สิทธิ์</th>
                   <th>จัดการ</th>
@@ -95,7 +96,8 @@ const AdminPage = () => {
               <tbody>
                 {users.map(user => (
                   <tr key={user.id}>
-                    <td>{user.email}</td>
+                    <td>{user.username}</td>
+                    <td>{user.email || '-'}</td>
                     <td>
                       <span className={`badge ${user.role === 'admin' ? 'bg-danger' : 'bg-success'}`}>
                         {user.role === 'admin' ? 'Admin' : 'Member'}
@@ -117,7 +119,7 @@ const AdminPage = () => {
                 
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan="3" className="text-center py-3">ไม่พบข้อมูลผู้ใช้</td>
+                    <td colSpan="4" className="text-center py-3">ไม่พบข้อมูลผู้ใช้</td>
                   </tr>
                 )}
               </tbody>
@@ -139,7 +141,7 @@ const AdminPage = () => {
                     ></button>
                   </div>
                   <div className="modal-body">
-                    <p>กำหนดสิทธิ์ให้กับ: <strong>{selectedUser.email}</strong></p>
+                    <p>กำหนดสิทธิ์ให้กับ: <strong>{selectedUser.username}</strong></p>
                     
                     <div className="mb-3">
                       <label className="form-label">สิทธิ์</label>

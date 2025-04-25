@@ -37,9 +37,10 @@ export const usePlates = () => {
     setDisplayPlates(plates.slice(startIndex, endIndex));
   }, [itemsPerPage]);
 
-  // ฟังก์ชันสำหรับแสดงเลขทะเบียน
+
   const getPlateNumber = useCallback((plateObj) => {
     if (!plateObj) return '-';
+    // ในฐานข้อมูลใหม่ใช้ field 'plate' แทน 'plate_number'
     if (plateObj.plate) return plateObj.plate;
     if (plateObj.plate_number) return plateObj.plate_number;
     return JSON.stringify(plateObj);
@@ -153,25 +154,25 @@ export const usePlates = () => {
     });
   }, [searchPlatesWithParams]);
   
-  // เพิ่มทะเบียนใหม่
-  const addPlate = useCallback(async (plateNumber, province, idCamera, cameraName) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      await plateService.addPlate(plateNumber, province, idCamera, cameraName);
-      
-      // โหลดข้อมูลใหม่
-      await loadLatestPlates();
-      
-      return true;
-    } catch (err) {
-      setError(err.message || 'ไม่สามารถเพิ่มทะเบียนได้');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [loadLatestPlates]);
+  // ฟังก์ชันสำหรับเพิ่มทะเบียนใหม่
+const addPlate = useCallback(async (plateNumber, province, id_camera, camera_name) => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    await plateService.addPlate(plateNumber, province, id_camera, camera_name);
+    
+    // โหลดข้อมูลใหม่
+    await loadLatestPlates();
+    
+    return true;
+  } catch (err) {
+    setError(err.message || 'ไม่สามารถเพิ่มทะเบียนได้');
+    return false;
+  } finally {
+    setLoading(false);
+  }
+}, [loadLatestPlates]);
   
   // ลบทะเบียน
   const deletePlate = useCallback(async (plateId) => {

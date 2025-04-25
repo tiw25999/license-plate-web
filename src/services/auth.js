@@ -12,45 +12,21 @@ const authClient = axios.create({
   timeout: 10000,
 });
 
-// เพิ่ม interceptor สำหรับจัดการความผิดพลาด
-authClient.interceptors.response.use(
-  response => response,
-  error => {
-    console.error('Auth API Error:', error);
-    
-    if (error.response && error.response.status === 401) {
-      // Token หมดอายุหรือไม่ถูกต้อง
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-      return Promise.reject({ 
-        ...error, 
-        message: 'กรุณาเข้าสู่ระบบใหม่' 
-      });
-    }
-    
-    return Promise.reject({ 
-      ...error, 
-      message: error.response?.data?.detail || 'เกิดข้อผิดพลาดในการเชื่อมต่อกับระบบ' 
-    });
-  }
-);
-
-// ฟังก์ชันสำหรับการเรียกใช้ API
 export const authService = {
   // สมัครสมาชิกใหม่
-  signup: async (email, password, confirmPassword) => {
+  signup: async (username, password, confirmPassword, email = null) => {
     try {
       const response = await authClient.post('/auth/signup', {
-        email,
+        username,
         password,
-        confirm_password: confirmPassword
+        confirm_password: confirmPassword,
+        email
       });
       
-      // เก็บข้อมูลผู้ใช้และ token ใน localStorage
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify({
         id: response.data.id,
+        username: response.data.username,
         email: response.data.email,
         role: response.data.role
       }));
@@ -63,17 +39,17 @@ export const authService = {
   },
   
   // เข้าสู่ระบบ
-  login: async (email, password) => {
+  login: async (username, password) => {
     try {
       const response = await authClient.post('/auth/login', {
-        email,
+        username,
         password
       });
       
-      // เก็บข้อมูลผู้ใช้และ token ใน localStorage
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify({
         id: response.data.id,
+        username: response.data.username,
         email: response.data.email,
         role: response.data.role
       }));
@@ -81,7 +57,7 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error('Error during login:', error);
-      throw error.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      throw error.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
     }
   },
   
@@ -95,7 +71,6 @@ export const authService = {
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {
-      // ลบข้อมูลผู้ใช้และ token ออกจาก localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
@@ -121,24 +96,7 @@ export const authService = {
     return user && user.role === 'admin';
   },
   
-  // ตรวจสอบว่าผู้ใช้มีสิทธิ์ในการทำงานหรือไม่
-  hasPermission: (requiredRole) => {
-    const user = authService.getCurrentUser();
-    
-    if (!user) return false;
-    
-    if (requiredRole === 'admin') {
-      return user.role === 'admin';
-    }
-    
-    if (requiredRole === 'member') {
-      return user.role === 'admin' || user.role === 'member';
-    }
-    
-    return true;
-  },
-  
-  // ดึงข้อมูลผู้ใช้ปัจจุบันจาก server (เพื่อตรวจสอบความถูกต้องของ token)
+  // ดึงข้อมูลผู้ใช้ปัจจุบันจาก server
   fetchCurrentUser: async () => {
     try {
       const token = localStorage.getItem('token');
@@ -148,20 +106,18 @@ export const authService = {
         params: { token }
       });
       
-      // อัพเดทข้อมูลผู้ใช้ใน localStorage
       localStorage.setItem('user', JSON.stringify(response.data));
       
       return response.data;
     } catch (error) {
       console.error('Error fetching current user:', error);
-      // ถ้าเกิด error ให้ logout
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       throw error;
     }
   },
   
-  // ดึงรายชื่อผู้ใช้ทั้งหมด (สำหรับ admin เท่านั้น)
+  // ดึงรายชื่อผู้ใช้ทั้งหมด
   fetchAllUsers: async () => {
     try {
       const token = localStorage.getItem('token');
@@ -178,7 +134,7 @@ export const authService = {
     }
   },
   
-  // อัพเดท role ของผู้ใช้ (สำหรับ admin เท่านั้น)
+  // อัพเดท role ของผู้ใช้
   updateUserRole: async (userId, role) => {
     try {
       const token = localStorage.getItem('token');
@@ -195,26 +151,6 @@ export const authService = {
     } catch (error) {
       console.error('Error updating user role:', error);
       throw error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
-    }
-  },
-  
-  // เปลี่ยนรหัสผ่าน
-  changePassword: async (currentPassword, newPassword) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-      
-      const response = await authClient.post('/auth/change-password', {
-        current_password: currentPassword,
-        new_password: newPassword
-      }, {
-        params: { token }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error changing password:', error);
-      throw error.message || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน';
     }
   }
 };

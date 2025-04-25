@@ -44,17 +44,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ฟังก์ชัน login
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     try {
       setLoading(true);
       setError(null);
       
-      await authService.login(email, password);
+      await authService.login(username, password);
       setUser(authService.getCurrentUser());
       
       return true;
     } catch (err) {
-      setError(err.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      setError(err.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       return false;
     } finally {
       setLoading(false);
@@ -62,12 +62,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ฟังก์ชัน signup
-  const signup = async (email, password, confirmPassword) => {
+  const signup = async (username, password, confirmPassword, email = null) => {
     try {
       setLoading(true);
       setError(null);
       
-      await authService.signup(email, password, confirmPassword);
+      await authService.signup(username, password, confirmPassword, email);
       setUser(authService.getCurrentUser());
       
       return true;

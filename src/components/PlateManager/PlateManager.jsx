@@ -132,7 +132,6 @@ const PlateManager = () => {
     setSearchMode(mode);
   }, []);
   
-  // ฟังก์ชันสำหรับเพิ่มทะเบียนใหม่
   const handleAddPlate = useCallback(async (e) => {
     e.preventDefault();
     
@@ -141,6 +140,7 @@ const PlateManager = () => {
     }
     
     try {
+      // เปลี่ยนชื่อพารามิเตอร์ให้ตรงกับ API ใหม่
       await addPlate(newPlate, newProvince, newIdCamera, newCameraName);
       
       // Reset form
