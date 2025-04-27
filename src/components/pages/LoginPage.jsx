@@ -79,7 +79,7 @@ const LoginPage = () => {
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
-                  <label className="form-check-label" htmlFor="rememberMe">จดจำฉัน (30 วัน)</label>
+                  <label className="form-check-label" htmlFor="rememberMe">จดจำฉัน</label>
                 </div>
                 
                 <button 

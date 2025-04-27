@@ -12,19 +12,26 @@ import SearchParamsDisplay from './SearchParamsDisplay';
 const SearchForm = ({
   searchTerm,
   onSearchTermChange,
+  startDate,
+  endDate,
+  startMonth,
+  endMonth,
+  startYear,
+  endYear,
+  startHour,
+  endHour,
   province,
   idCamera,
   cameraName,
+  searchMode,
   lastSearchParams,
   loading,
   onSearch,
   onReset,
   onLoadLatestPlates,
-  onSearchLastNDays
+  onSearchLastNDays,
+  onSearchModeChange
 }) => {
-  // State สำหรับโหมดการค้นหา
-  const [searchMode, setSearchMode] = useState('quick');
-  
   // State สำหรับรายการจังหวัดและกล้อง
   const [provinces, setProvinces] = useState([]);
   const [cameras, setCameras] = useState([]);
@@ -36,13 +43,29 @@ const SearchForm = ({
       try {
         setLoadingOptions(true);
         
-        // โหลดรายการจังหวัด
-        const provincesData = await plateService.getProvinces();
-        setProvinces(provincesData);
+        // ดึงข้อมูลทะเบียนทั้งหมดแล้วสร้างรายการจังหวัดที่ไม่ซ้ำกัน
+        try {
+          const platesData = await plateService.getLatestPlates(300);
+          const uniqueProvinces = [...new Set(
+            platesData
+              .map(plate => plate.province)
+              .filter(province => province) // กรองเฉพาะค่าที่ไม่เป็น null/undefined/empty
+          )];
+          
+          setProvinces(uniqueProvinces);
+        } catch (error) {
+          console.error('Error loading provinces:', error);
+          setProvinces([]);
+        }
         
         // โหลดรายการกล้อง
-        const camerasData = await plateService.getCameras();
-        setCameras(camerasData);
+        try {
+          const camerasData = await plateService.getCameras();
+          setCameras(camerasData);
+        } catch (error) {
+          console.error('Error loading cameras:', error);
+          setCameras([]);
+        }
       } catch (error) {
         console.error('Error loading options:', error);
       } finally {
@@ -66,13 +89,13 @@ const SearchForm = ({
         <div className="btn-group">
           <button 
             className={`btn ${searchMode === 'quick' ? 'btn-primary' : 'btn-outline-secondary'}`}
-            onClick={() => setSearchMode('quick')}
+            onClick={() => onSearchModeChange('quick')}
           >
             <i className="bi bi-search"></i> ค้นหาด่วน
           </button>
           <button 
             className={`btn ${searchMode === 'advanced' ? 'btn-primary' : 'btn-outline-secondary'}`}
-            onClick={() => setSearchMode('advanced')}
+            onClick={() => onSearchModeChange('advanced')}
           >
             <i className="bi bi-sliders"></i> ค้นหาขั้นสูง
           </button>
@@ -91,6 +114,14 @@ const SearchForm = ({
         ) : (
           <AdvancedSearch 
             initialSearchTerm={searchTerm}
+            initialStartDate={startDate}
+            initialEndDate={endDate}
+            initialStartMonth={startMonth}
+            initialEndMonth={endMonth}
+            initialStartYear={startYear}
+            initialEndYear={endYear}
+            initialStartHour={startHour}
+            initialEndHour={endHour}
             initialProvince={province}
             initialIdCamera={idCamera}
             initialCameraName={cameraName}
@@ -116,15 +147,25 @@ const SearchForm = ({
 SearchForm.propTypes = {
   searchTerm: PropTypes.string.isRequired,
   onSearchTermChange: PropTypes.func.isRequired,
+  startDate: PropTypes.string,
+  endDate: PropTypes.string,
+  startMonth: PropTypes.string,
+  endMonth: PropTypes.string,
+  startYear: PropTypes.string,
+  endYear: PropTypes.string,
+  startHour: PropTypes.string,
+  endHour: PropTypes.string,
   province: PropTypes.string,
   idCamera: PropTypes.string,
   cameraName: PropTypes.string,
+  searchMode: PropTypes.string.isRequired,
   lastSearchParams: PropTypes.object.isRequired,
   loading: PropTypes.bool.isRequired,
   onSearch: PropTypes.func.isRequired,
   onReset: PropTypes.func.isRequired,
   onLoadLatestPlates: PropTypes.func.isRequired,
-  onSearchLastNDays: PropTypes.func.isRequired
+  onSearchLastNDays: PropTypes.func.isRequired,
+  onSearchModeChange: PropTypes.func.isRequired
 };
 
 export default SearchForm;

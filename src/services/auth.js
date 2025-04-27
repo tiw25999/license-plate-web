@@ -39,7 +39,7 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error('Error during signup:', error);
-      throw error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
+      throw error.response?.data?.detail || error.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
     }
   },
   
@@ -67,7 +67,7 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error('Error during login:', error);
-      throw error.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+      throw error.response?.data?.detail || error.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
     }
   },
   
@@ -155,16 +155,20 @@ export const authService = {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
       
+      console.log('Fetching users with token:', token);
+      
       const response = await authClient.get('/auth/users', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
+      console.log('Users response:', response); // เพิ่ม log เพื่อดู response
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching all users:', error);
-      throw error.message || 'ไม่สามารถดึงข้อมูลผู้ใช้ได้';
+      throw error.response?.data?.detail || error.message || 'ไม่สามารถดึงข้อมูลผู้ใช้ได้';
     }
   },
   
@@ -186,7 +190,7 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error('Error updating user role:', error);
-      throw error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
+      throw error.response?.data?.detail || error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
     }
   }
 };

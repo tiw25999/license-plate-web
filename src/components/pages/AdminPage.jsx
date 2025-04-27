@@ -23,9 +23,12 @@ const AdminPage = () => {
         try {
           setLoading(true);
           setError('');
+          console.log('Fetching users...');
           const data = await authService.fetchAllUsers();
+          console.log('Users loaded:', data);
           setUsers(data);
         } catch (err) {
+          console.error('Error fetching users:', err);
           setError('ไม่สามารถโหลดข้อมูลผู้ใช้ได้: ' + (err.message || ''));
         } finally {
           setLoading(false);

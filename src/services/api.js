@@ -13,7 +13,6 @@ const apiClient = axios.create({
 });
 
 // เพิ่ม interceptor สำหรับแนบ token ไปกับทุก request
-// เพิ่ม interceptor สำหรับแนบ token ไปกับทุก request
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -57,7 +56,7 @@ export const plateService = {
         id_camera,
         camera_name,
         limit = 500 
-      } = params;
+      } = params || {};
       
       const queryParams = new URLSearchParams();
       
@@ -147,6 +146,26 @@ export const plateService = {
     } catch (error) {
       console.error('API health check failed:', error);
       throw error;
+    }
+  },
+  
+  // ดึงรายการจังหวัดทั้งหมด (ดึงข้อมูลจากทะเบียนที่มีอยู่)
+  getProvinces: async () => {
+    try {
+      // ดึงข้อมูลทะเบียนทั้งหมด
+      const response = await apiClient.get('/plates/get_plates');
+      
+      // สร้างรายการจังหวัดที่ไม่ซ้ำกัน
+      const provinces = [...new Set(
+        response.data
+          .map(plate => plate.province)
+          .filter(province => province) // กรองเฉพาะค่าที่ไม่เป็น null/undefined/empty
+      )];
+      
+      return provinces;
+    } catch (error) {
+      console.error('Error fetching provinces:', error);
+      return [];
     }
   }
 };
