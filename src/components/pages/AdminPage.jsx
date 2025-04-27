@@ -44,52 +44,62 @@ const AdminPage = () => {
     return <Navigate to="/" replace />;
   }
   
-  // อัพเดท role ของผู้ใช้
-  const handleUpdateRole = async () => {
-    if (!selectedUser) return;
+// ในฟังก์ชัน handleUpdateRole
+const handleUpdateRole = async () => {
+  if (!selectedUser) return;
+  
+  try {
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
     
-    try {
-      setLoading(true);
-      setError('');
-      setSuccessMessage('');
-      
-      console.log('Selected user:', selectedUser);
-      console.log('New role:', selectedRole);
-      
-      // เพิ่ม timeout สำหรับการเรียก API
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 วินาที
-      
-      try {
-        await authService.updateUserRole(selectedUser.id, selectedRole);
-        
-        // ยกเลิก timeout หลังจากเรียก API สำเร็จ
-        clearTimeout(timeoutId);
-        
-        console.log('Role update completed successfully');
-        
-        // อัพเดทข้อมูลในหน้า
-        setUsers(users.map(user => {
-          if (user.id === selectedUser.id) {
-            return { ...user, role: selectedRole };
-          }
-          return user;
-        }));
-        
-        setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.username} เป็น ${selectedRole} เรียบร้อยแล้ว`);
-        setSelectedUser(null);
-      } catch (apiError) {
-        console.error('API call error:', apiError);
-        setError(`ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้: ${apiError.message || ''}`);
-        clearTimeout(timeoutId);
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      setError('เกิดข้อผิดพลาดที่ไม่คาดคิด: ' + (err.message || ''));
-    } finally {
-      setLoading(false);
+    // เพิ่ม log เพื่อดีบัก
+    console.log('Updating role for user:', selectedUser.id, 'to', selectedRole);
+    
+    // ใช้ fetch API โดยตรงแทนการเรียกผ่าน auth service
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://license-plate-system-production.up.railway.app/auth/update-role', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        user_id: selectedUser.id,
+        role: selectedRole
+      })
+    });
+    
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      throw new Error(errorText || `HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const result = await response.json();
+    console.log('Update result:', result);
+    
+    // อัพเดทข้อมูลในหน้า
+    setUsers(users.map(user => {
+      if (user.id === selectedUser.id) {
+        return { ...user, role: selectedRole };
+      }
+      return user;
+    }));
+    
+    setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.username} เป็น ${selectedRole} เรียบร้อยแล้ว`);
+    
+    // ปิด modal
+    setSelectedUser(null);
+  } catch (err) {
+    console.error('Error updating role:', err);
+    setError('ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้: ' + (err.message || ''));
+  } finally {
+    setLoading(false);
+  }
+};
   
   return (
     <div className="container mt-4">
