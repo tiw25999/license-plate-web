@@ -13,28 +13,38 @@ const AdminPage = () => {
   const [selectedRole, setSelectedRole] = useState('member');
   const [successMessage, setSuccessMessage] = useState('');
   
+  // State สำหรับการเพิ่มผู้ใช้
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState('member');
+  
+  // State สำหรับการลบผู้ใช้
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
   const { isAdmin } = useAuth();
   
-  // useEffect ต้องอยู่ที่ระดับบนสุด ไม่อยู่ภายใต้เงื่อนไข
+  // ฟังก์ชันสำหรับโหลดข้อมูลผู้ใช้
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      console.log('Fetching users...');
+      const data = await authService.fetchAllUsers();
+      console.log('Users loaded:', data);
+      setUsers(data);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('ไม่สามารถโหลดข้อมูลผู้ใช้ได้: ' + (err.message || ''));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   useEffect(() => {
-    // ย้ายเงื่อนไขเข้ามาในนี้แทน
     if (isAdmin()) {
-      const fetchUsers = async () => {
-        try {
-          setLoading(true);
-          setError('');
-          console.log('Fetching users...');
-          const data = await authService.fetchAllUsers();
-          console.log('Users loaded:', data);
-          setUsers(data);
-        } catch (err) {
-          console.error('Error fetching users:', err);
-          setError('ไม่สามารถโหลดข้อมูลผู้ใช้ได้: ' + (err.message || ''));
-        } finally {
-          setLoading(false);
-        }
-      };
-      
       fetchUsers();
     }
   }, [isAdmin]);
@@ -44,7 +54,7 @@ const AdminPage = () => {
     return <Navigate to="/" replace />;
   }
   
-  // ในฟังก์ชัน handleUpdateRole
+  // ฟังก์ชันสำหรับอัพเดตสิทธิ์ผู้ใช้
   const handleUpdateRole = async () => {
     if (!selectedUser) return;
     
@@ -53,10 +63,8 @@ const AdminPage = () => {
       setError('');
       setSuccessMessage('');
       
-      // เพิ่ม log เพื่อดีบัก
       console.log('Updating role for user:', selectedUser.id, 'to', selectedRole);
       
-      // ใช้ fetch API โดยตรงแทนการเรียกผ่าน auth service
       const token = localStorage.getItem('token');
       const response = await fetch('https://license-plate-system-production.up.railway.app/auth/update-role', {
         method: 'POST',
@@ -70,16 +78,12 @@ const AdminPage = () => {
         })
       });
       
-      console.log('Response status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Error response:', errorText);
         throw new Error(errorText || `HTTP error! status: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('Update result:', result);
       
       // อัพเดทข้อมูลในหน้า
       setUsers(users.map(user => {
@@ -101,12 +105,131 @@ const AdminPage = () => {
     }
   };
   
+  // ฟังก์ชันสำหรับเพิ่มผู้ใช้ใหม่
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      setError('');
+      setSuccessMessage('');
+      
+      // ตรวจสอบข้อมูล
+      if (!newUsername || !newPassword) {
+        throw new Error('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+      }
+      
+      if (newPassword.length < 6) {
+        throw new Error('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+      }
+      
+      // เรียก API สำหรับเพิ่มผู้ใช้
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://license-plate-system-production.up.railway.app/auth/create-user', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username: newUsername,
+          password: newPassword,
+          email: newEmail || null,
+          role: newRole
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      // รีเซ็ตข้อมูลฟอร์ม
+      setNewUsername('');
+      setNewPassword('');
+      setNewEmail('');
+      setNewRole('member');
+      
+      // ปิด modal
+      setShowAddUserModal(false);
+      
+      // แสดงข้อความสำเร็จ
+      setSuccessMessage(`เพิ่มผู้ใช้ ${result.username} เรียบร้อยแล้ว`);
+      
+      // โหลดข้อมูลผู้ใช้ใหม่
+      fetchUsers();
+      
+    } catch (err) {
+      console.error('Error adding user:', err);
+      setError('ไม่สามารถเพิ่มผู้ใช้ได้: ' + (err.message || ''));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // ฟังก์ชันสำหรับลบผู้ใช้
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      setLoading(true);
+      setError('');
+      setSuccessMessage('');
+      
+      // เรียก API สำหรับลบผู้ใช้
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://license-plate-system-production.up.railway.app/auth/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_id: userToDelete.id
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP error! status: ${response.status}`);
+      }
+      
+      // ลบผู้ใช้ออกจาก state
+      setUsers(users.filter(user => user.id !== userToDelete.id));
+      
+      // แสดงข้อความสำเร็จ
+      setSuccessMessage(`ลบผู้ใช้ ${userToDelete.username} เรียบร้อยแล้ว`);
+      
+      // ปิด modal
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError('ไม่สามารถลบผู้ใช้ได้: ' + (err.message || ''));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   return (
     <div className="container mt-4">
       <h2 className="mb-4">จัดการผู้ใช้</h2>
       
       {error && <Alert type="danger" message={error} />}
       {successMessage && <Alert type="success" message={successMessage} />}
+      
+      {/* ปุ่มเพิ่มผู้ใช้ */}
+      <div className="mb-3">
+        <button 
+          className="btn btn-success" 
+          onClick={() => setShowAddUserModal(true)}
+        >
+          <i className="bi bi-person-plus-fill"></i> เพิ่มผู้ใช้
+        </button>
+      </div>
       
       {loading && !users.length ? (
         <div className="text-center my-5">
@@ -136,15 +259,26 @@ const AdminPage = () => {
                       </span>
                     </td>
                     <td>
-                      <button 
-                        className="btn btn-sm btn-primary"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setSelectedRole(user.role);
-                        }}
-                      >
-                        แก้ไขสิทธิ์
-                      </button>
+                      <div className="btn-group">
+                        <button 
+                          className="btn btn-sm btn-primary"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setSelectedRole(user.role);
+                          }}
+                        >
+                          แก้ไขสิทธิ์
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-danger ms-1"
+                          onClick={() => {
+                            setUserToDelete(user);
+                            setShowDeleteModal(true);
+                          }}
+                        >
+                          ลบ
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -158,7 +292,7 @@ const AdminPage = () => {
             </table>
           </div>
           
-          {/* Modal แก้ไขสิทธิ์ - ส่วนที่แก้ไข */}
+          {/* Modal แก้ไขสิทธิ์ */}
           {selectedUser && (
             <>
               <div 
@@ -221,8 +355,170 @@ const AdminPage = () => {
                   </div>
                 </div>
               </div>
-              
-              {/* แยก Backdrop มาอยู่นอก modal */}
+              <div className="modal-backdrop fade show"></div>
+            </>
+          )}
+          
+          {/* Modal เพิ่มผู้ใช้ */}
+          {showAddUserModal && (
+            <>
+              <div 
+                className="modal fade show" 
+                style={{display: 'block'}} 
+                tabIndex="-1" 
+                aria-modal="true" 
+                role="dialog"
+                aria-labelledby="add-user-modal-title"
+              >
+                <div className="modal-dialog">
+                  <div className="modal-content">
+                    <div className="modal-header">
+                      <h5 className="modal-title" id="add-user-modal-title">เพิ่มผู้ใช้ใหม่</h5>
+                      <button 
+                        type="button" 
+                        className="btn-close" 
+                        onClick={() => setShowAddUserModal(false)}
+                        aria-label="ปิด"
+                      ></button>
+                    </div>
+                    <div className="modal-body">
+                      <form onSubmit={handleAddUser}>
+                        <div className="mb-3">
+                          <label htmlFor="newUsername" className="form-label">ชื่อผู้ใช้</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="newUsername"
+                            value={newUsername}
+                            onChange={(e) => setNewUsername(e.target.value)}
+                            required
+                          />
+                        </div>
+                        
+                        <div className="mb-3">
+                          <label htmlFor="newPassword" className="form-label">รหัสผ่าน</label>
+                          <input
+                            type="password"
+                            className="form-control"
+                            id="newPassword"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            required
+                          />
+                          <div className="form-text">รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร</div>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <label htmlFor="newEmail" className="form-label">อีเมล (ไม่บังคับ)</label>
+                          <input
+                            type="email"
+                            className="form-control"
+                            id="newEmail"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="mb-3">
+                          <label htmlFor="newRole" className="form-label">สิทธิ์</label>
+                          <select 
+                            className="form-select"
+                            id="newRole"
+                            value={newRole}
+                            onChange={(e) => setNewRole(e.target.value)}
+                          >
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                        
+                        <div className="modal-footer px-0 pb-0">
+                          <button 
+                            type="button" 
+                            className="btn btn-secondary"
+                            onClick={() => setShowAddUserModal(false)}
+                          >
+                            ยกเลิก
+                          </button>
+                          <button 
+                            type="submit" 
+                            className="btn btn-success"
+                            disabled={loading}
+                          >
+                            {loading ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                กำลังบันทึก...
+                              </>
+                            ) : 'เพิ่มผู้ใช้'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-backdrop fade show"></div>
+            </>
+          )}
+          
+          {/* Modal ยืนยันการลบผู้ใช้ */}
+          {showDeleteModal && userToDelete && (
+            <>
+              <div 
+                className="modal fade show" 
+                style={{display: 'block'}} 
+                tabIndex="-1" 
+                aria-modal="true" 
+                role="dialog"
+                aria-labelledby="delete-user-modal-title"
+              >
+                <div className="modal-dialog">
+                  <div className="modal-content">
+                    <div className="modal-header">
+                      <h5 className="modal-title" id="delete-user-modal-title">ยืนยันการลบผู้ใช้</h5>
+                      <button 
+                        type="button" 
+                        className="btn-close" 
+                        onClick={() => {
+                          setShowDeleteModal(false);
+                          setUserToDelete(null);
+                        }}
+                        aria-label="ปิด"
+                      ></button>
+                    </div>
+                    <div className="modal-body">
+                      <p>คุณแน่ใจหรือไม่ที่ต้องการลบผู้ใช้ <strong>{userToDelete.username}</strong>?</p>
+                      <p className="text-danger">การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+                    </div>
+                    <div className="modal-footer">
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          setShowDeleteModal(false);
+                          setUserToDelete(null);
+                        }}
+                      >
+                        ยกเลิก
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn btn-danger"
+                        onClick={handleDeleteUser}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            กำลังลบ...
+                          </>
+                        ) : 'ลบผู้ใช้'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="modal-backdrop fade show"></div>
             </>
           )}
