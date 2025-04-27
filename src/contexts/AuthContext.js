@@ -21,6 +21,13 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         
+        // ตรวจสอบการหมดอายุ
+        if (authService.isTokenExpired()) {
+          await authService.logout();
+          setUser(null);
+          return;
+        }
+        
         // ถ้ามี token ให้ดึงข้อมูลผู้ใช้จาก localStorage ก่อน
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -38,7 +45,6 @@ export const AuthProvider = ({ children }) => {
         } catch (err) {
           console.error("Error validating token:", err);
           // ถ้าเกิดข้อผิดพลาด ให้ใช้ข้อมูลจาก localStorage ต่อไป
-          // ไม่ต้อง logout ผู้ใช้
         }
       } catch (err) {
         setError(err.message);
@@ -51,21 +57,24 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ฟังก์ชัน login
-const login = async (username, password) => {
+  const login = async (username, password, remember = true) => {
     try {
       setLoading(true);
       setError(null);
       
       const response = await authService.login(username, password);
       
-      // บันทึก token ลงใน localStorage
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify({
-        id: response.id,
-        username: response.username,
-        email: response.email,
-        role: response.role
-      }));
+      // กำหนดวันหมดอายุตามการเลือก "จดจำฉัน"
+      const expiryDate = new Date();
+      if (remember) {
+        expiryDate.setDate(expiryDate.getDate() + 30); // 30 วัน
+      } else {
+        // ถ้าไม่ได้เลือก "จดจำฉัน" ให้หมดอายุเมื่อปิดเบราวเซอร์
+        // หรือจะกำหนดให้อยู่ได้ 1 วัน
+        expiryDate.setDate(expiryDate.getDate() + 1);
+      }
+      
+      localStorage.setItem('tokenExpiry', expiryDate.toISOString());
       
       setUser({
         id: response.id,
@@ -91,6 +100,11 @@ const login = async (username, password) => {
       
       await authService.signup(username, password, confirmPassword, email);
       setUser(authService.getCurrentUser());
+      
+      // เพิ่มการกำหนดวันหมดอายุเหมือน login
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30); // 30 วัน
+      localStorage.setItem('tokenExpiry', expiryDate.toISOString());
       
       return true;
     } catch (err) {

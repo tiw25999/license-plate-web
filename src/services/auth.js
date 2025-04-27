@@ -31,6 +31,11 @@ export const authService = {
         role: response.data.role
       }));
       
+      // เพิ่มการเก็บวันหมดอายุ (30 วันนับจากวันนี้)
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      localStorage.setItem('tokenExpiry', expiryDate.toISOString());
+      
       return response.data;
     } catch (error) {
       console.error('Error during signup:', error);
@@ -54,6 +59,11 @@ export const authService = {
         role: response.data.role
       }));
       
+      // เพิ่มการเก็บวันหมดอายุ (30 วันนับจากวันนี้)
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      localStorage.setItem('tokenExpiry', expiryDate.toISOString());
+      
       return response.data;
     } catch (error) {
       console.error('Error during login:', error);
@@ -73,12 +83,34 @@ export const authService = {
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('tokenExpiry');
     }
+  },
+  
+  // ตรวจสอบว่า token หมดอายุหรือยัง
+  isTokenExpired: () => {
+    const expiryStr = localStorage.getItem('tokenExpiry');
+    if (!expiryStr) return true;
+    
+    const expiry = new Date(expiryStr);
+    const now = new Date();
+    
+    return now > expiry;
   },
   
   // ตรวจสอบสถานะการเข้าสู่ระบบ
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    
+    // ตรวจสอบว่า token หมดอายุหรือยัง
+    if (authService.isTokenExpired()) {
+      // ถ้าหมดอายุ ให้ล้างข้อมูลแล้ว return false
+      authService.logout();
+      return false;
+    }
+    
+    return true;
   },
   
   // ดึงข้อมูลผู้ใช้ปัจจุบัน
@@ -103,7 +135,9 @@ export const authService = {
       if (!token) throw new Error('No token found');
       
       const response = await authClient.get('/auth/me', {
-        params: { token }
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       localStorage.setItem('user', JSON.stringify(response.data));
@@ -111,8 +145,6 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching current user:', error);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
       throw error;
     }
   },
@@ -124,7 +156,9 @@ export const authService = {
       if (!token) throw new Error('No token found');
       
       const response = await authClient.get('/auth/users', {
-        params: { token }
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       return response.data;
@@ -144,7 +178,9 @@ export const authService = {
         user_id: userId,
         role
       }, {
-        params: { token }
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       return response.data;

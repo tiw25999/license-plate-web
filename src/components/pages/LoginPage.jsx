@@ -6,6 +6,7 @@ import Alert from '../common/Alert';
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -23,7 +24,7 @@ const LoginPage = () => {
     setLoading(true);
     
     try {
-      const success = await login(username, password);
+      const success = await login(username, password, rememberMe);
       if (success) {
         navigate('/');
       }
@@ -68,6 +69,17 @@ const LoginPage = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                </div>
+                
+                <div className="mb-3 form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="rememberMe">จดจำฉัน (30 วัน)</label>
                 </div>
                 
                 <button 
