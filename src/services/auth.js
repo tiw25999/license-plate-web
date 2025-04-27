@@ -163,7 +163,7 @@ export const authService = {
         }
       });
       
-      console.log('Users response:', response); // เพิ่ม log เพื่อดู response
+      console.log('Users response:', response);
       
       return response.data;
     } catch (error) {
@@ -172,34 +172,50 @@ export const authService = {
     }
   },
   
-// อัพเดท role ของผู้ใช้
-updateUserRole: async (userId, role) => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No token found');
-    
-    console.log('Updating role with token:', token);
-    console.log('User ID:', userId);
-    console.log('New role:', role);
-    
-    const response = await authClient.post('/auth/update-role', {
-      user_id: userId,
-      role
-    }, {
-      headers: {
-        'Authorization': `Bearer ${token}`
+  // อัพเดท role ของผู้ใช้
+  updateUserRole: async (userId, role) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+      
+      console.log('Starting updateUserRole', { userId, role });
+      
+      // สร้างข้อมูลที่จะส่งไป
+      const data = {
+        user_id: userId,
+        role: role
+      };
+      
+      console.log('Request payload:', data);
+      console.log('Request headers:', { 'Authorization': `Bearer ${token.substring(0, 20)}...` });
+      
+      // ใช้ fetch API แทน axios เพื่อทดสอบดูว่ามีผลต่างกันหรือไม่
+      const response = await fetch(`${API_URL}/auth/update-role`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        throw new Error(errorData || `HTTP error! status: ${response.status}`);
       }
-    });
-    
-    console.log('Update role response:', response);
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error updating user role:', error);
-    console.error('Error details:', error.response?.data);
-    throw error.response?.data?.detail || error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
+      
+      const responseData = await response.json();
+      console.log('Update role response:', responseData);
+      
+      return responseData;
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      throw error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
+    }
   }
-}
 };
 
 export default authService;

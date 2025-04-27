@@ -44,7 +44,7 @@ const AdminPage = () => {
     return <Navigate to="/" replace />;
   }
   
-  
+  // อัพเดท role ของผู้ใช้
   const handleUpdateRole = async () => {
     if (!selectedUser) return;
     
@@ -53,26 +53,39 @@ const AdminPage = () => {
       setError('');
       setSuccessMessage('');
       
-      console.log('Updating role for user:', selectedUser);
+      console.log('Selected user:', selectedUser);
       console.log('New role:', selectedRole);
       
-      await authService.updateUserRole(selectedUser.id, selectedRole);
+      // เพิ่ม timeout สำหรับการเรียก API
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 วินาที
       
-      console.log('Role updated successfully');
-      
-      // อัพเดทข้อมูลในหน้า
-      setUsers(users.map(user => {
-        if (user.id === selectedUser.id) {
-          return { ...user, role: selectedRole };
-        }
-        return user;
-      }));
-      
-      setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.username} เป็น ${selectedRole} เรียบร้อยแล้ว`);
-      setSelectedUser(null);
+      try {
+        await authService.updateUserRole(selectedUser.id, selectedRole);
+        
+        // ยกเลิก timeout หลังจากเรียก API สำเร็จ
+        clearTimeout(timeoutId);
+        
+        console.log('Role update completed successfully');
+        
+        // อัพเดทข้อมูลในหน้า
+        setUsers(users.map(user => {
+          if (user.id === selectedUser.id) {
+            return { ...user, role: selectedRole };
+          }
+          return user;
+        }));
+        
+        setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.username} เป็น ${selectedRole} เรียบร้อยแล้ว`);
+        setSelectedUser(null);
+      } catch (apiError) {
+        console.error('API call error:', apiError);
+        setError(`ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้: ${apiError.message || ''}`);
+        clearTimeout(timeoutId);
+      }
     } catch (err) {
-      console.error('Update role error:', err);
-      setError('ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้: ' + (err.message || ''));
+      console.error('Unexpected error:', err);
+      setError('เกิดข้อผิดพลาดที่ไม่คาดคิด: ' + (err.message || ''));
     } finally {
       setLoading(false);
     }
@@ -178,7 +191,12 @@ const AdminPage = () => {
                       onClick={handleUpdateRole}
                       disabled={loading}
                     >
-                      {loading ? 'กำลังบันทึก...' : 'บันทึก'}
+                      {loading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          กำลังบันทึก...
+                        </>
+                      ) : 'บันทึก'}
                     </button>
                   </div>
                 </div>
