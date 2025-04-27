@@ -83,7 +83,8 @@ const AdminPage = () => {
         throw new Error(errorText || `HTTP error! status: ${response.status}`);
       }
       
-      const result = await response.json();
+      // เปลี่ยนจาก const result = await response.json() เพื่อแก้ ESLint
+      await response.json();
       
       // อัพเดทข้อมูลในหน้า
       setUsers(users.map(user => {
@@ -144,7 +145,7 @@ const AdminPage = () => {
         throw new Error(errorText || `HTTP error! status: ${response.status}`);
       }
       
-      const result = await response.json();
+      const resultData = await response.json();
       
       // รีเซ็ตข้อมูลฟอร์ม
       setNewUsername('');
@@ -156,7 +157,7 @@ const AdminPage = () => {
       setShowAddUserModal(false);
       
       // แสดงข้อความสำเร็จ
-      setSuccessMessage(`เพิ่มผู้ใช้ ${result.username} เรียบร้อยแล้ว`);
+      setSuccessMessage(`เพิ่มผู้ใช้ ${resultData.username || 'ใหม่'} เรียบร้อยแล้ว`);
       
       // โหลดข้อมูลผู้ใช้ใหม่
       fetchUsers();
@@ -195,6 +196,9 @@ const AdminPage = () => {
         const errorText = await response.text();
         throw new Error(errorText || `HTTP error! status: ${response.status}`);
       }
+      
+      // ใช้ response แต่ไม่ต้องเก็บค่า
+      await response.json();
       
       // ลบผู้ใช้ออกจาก state
       setUsers(users.filter(user => user.id !== userToDelete.id));
