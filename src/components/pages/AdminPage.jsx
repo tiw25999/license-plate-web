@@ -106,7 +106,7 @@ const AdminPage = () => {
     }
   };
   
-  // ฟังก์ชันสำหรับเพิ่มผู้ใช้ใหม่
+  // ฟังก์ชันสำหรับเพิ่มผู้ใช้ใหม่ (แก้ไขให้ใช้ /auth/create-user)
   const handleAddUser = async (e) => {
     e.preventDefault();
     
@@ -466,8 +466,8 @@ const AdminPage = () => {
             </>
           )}
           
-          {/* Modal ยืนยันการลบผู้ใช้ */}
-          {showDeleteModal && userToDelete && (
+{/* Modal ยืนยันการลบผู้ใช้ */}
+{showDeleteModal && userToDelete && (
             <>
               <div 
                 className="modal fade show" 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Alert from '../common/Alert';
 
@@ -91,11 +91,7 @@ const LoginPage = () => {
                 </button>
               </form>
               
-              <div className="mt-3 text-center">
-                <p className="mb-0">
-                  ยังไม่มีบัญชี? <Link to="/signup">สมัครสมาชิก</Link>
-                </p>
-              </div>
+              {/* ลบส่วนลิงก์ไปหน้าสมัครสมาชิก */}
             </div>
           </div>
         </div>

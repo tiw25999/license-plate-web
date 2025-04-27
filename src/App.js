@@ -1,4 +1,4 @@
-import 'bootstrap-icons/font/bootstrap-icons.css'; // เพิ่ม import สำหรับ bootstrap icons
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
@@ -6,7 +6,6 @@ import './App.css';
 import PlateManager from './components/PlateManager';
 import AdminPage from './components/pages/AdminPage';
 import LoginPage from './components/pages/LoginPage';
-import SignupPage from './components/pages/SignupPage';
 import { AuthProvider } from './contexts/AuthContext';
 
 // Component สำหรับป้องกันหน้าที่ต้องการ login
@@ -45,7 +44,7 @@ function App() {
           <Routes>
             <Route path="/" element={<PlateManager />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+            {/* ลบเส้นทางไปยังหน้าสมัครสมาชิก */}
             <Route 
               path="/admin" 
               element={
