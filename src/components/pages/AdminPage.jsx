@@ -44,7 +44,7 @@ const AdminPage = () => {
     return <Navigate to="/" replace />;
   }
   
-  // อัพเดท role ของผู้ใช้
+  
   const handleUpdateRole = async () => {
     if (!selectedUser) return;
     
@@ -53,7 +53,12 @@ const AdminPage = () => {
       setError('');
       setSuccessMessage('');
       
+      console.log('Updating role for user:', selectedUser);
+      console.log('New role:', selectedRole);
+      
       await authService.updateUserRole(selectedUser.id, selectedRole);
+      
+      console.log('Role updated successfully');
       
       // อัพเดทข้อมูลในหน้า
       setUsers(users.map(user => {
@@ -66,6 +71,7 @@ const AdminPage = () => {
       setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.username} เป็น ${selectedRole} เรียบร้อยแล้ว`);
       setSelectedUser(null);
     } catch (err) {
+      console.error('Update role error:', err);
       setError('ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้: ' + (err.message || ''));
     } finally {
       setLoading(false);

@@ -172,27 +172,34 @@ export const authService = {
     }
   },
   
-  // อัพเดท role ของผู้ใช้
-  updateUserRole: async (userId, role) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-      
-      const response = await authClient.post('/auth/update-role', {
-        user_id: userId,
-        role
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      throw error.response?.data?.detail || error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
-    }
+// อัพเดท role ของผู้ใช้
+updateUserRole: async (userId, role) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+    
+    console.log('Updating role with token:', token);
+    console.log('User ID:', userId);
+    console.log('New role:', role);
+    
+    const response = await authClient.post('/auth/update-role', {
+      user_id: userId,
+      role
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    console.log('Update role response:', response);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    console.error('Error details:', error.response?.data);
+    throw error.response?.data?.detail || error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
   }
+}
 };
 
 export default authService;
