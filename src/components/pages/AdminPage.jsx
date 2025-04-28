@@ -106,7 +106,6 @@ const AdminPage = () => {
     }
   };
   
-  // ฟังก์ชันสำหรับเพิ่มผู้ใช้ใหม่ (แก้ไขให้ใช้ /auth/create-user)
   const handleAddUser = async (e) => {
     e.preventDefault();
     
@@ -124,6 +123,20 @@ const AdminPage = () => {
         throw new Error('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
       }
       
+      // สร้างข้อมูลที่จะส่งไปโดยกำหนดค่าที่แน่นอนว่าจะส่งอะไรบ้าง
+      const requestData = {
+        username: newUsername,
+        password: newPassword,
+        role: newRole
+      };
+      
+      // ใส่ email เฉพาะเมื่อมีค่าและไม่ใช่ string ว่าง
+      if (newEmail && newEmail.trim() !== '') {
+        requestData.email = newEmail.trim();
+      }
+      
+      console.log('Sending data to server:', JSON.stringify(requestData));
+      
       // เรียก API สำหรับเพิ่มผู้ใช้
       const token = localStorage.getItem('token');
       const response = await fetch('https://license-plate-system-production.up.railway.app/auth/create-user', {
@@ -132,21 +145,25 @@ const AdminPage = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          username: newUsername,
-          password: newPassword,
-          email: newEmail || null,
-          role: newRole
-        })
+        body: JSON.stringify(requestData)
       });
       
+      // อ่านตัว response ก่อนเพื่อดูข้อมูลดิบ
+      const responseText = await response.text();
+      console.log('Response from server:', responseText);
+      
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Error response:", errorData);
-        throw new Error(errorData || `HTTP error! status: ${response.status}`);
+        throw new Error(responseText || `HTTP error! status: ${response.status}`);
       }
       
-      const resultData = await response.json();
+      // แปลง response text เป็น JSON หลังจากตรวจสอบว่าไม่มีข้อผิดพลาดแล้ว
+      let resultData;
+      try {
+        resultData = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Error parsing JSON response:', e);
+        resultData = { message: 'สร้างผู้ใช้สำเร็จ แต่ไม่สามารถอ่านข้อมูลตอบกลับได้' };
+      }
       
       // รีเซ็ตข้อมูลฟอร์ม
       setNewUsername('');
@@ -160,7 +177,7 @@ const AdminPage = () => {
       // แสดงข้อความสำเร็จ
       setSuccessMessage(`เพิ่มผู้ใช้ ${resultData.username || 'ใหม่'} เรียบร้อยแล้ว`);
       
-      // โหลดข้อมูลผู้ใช้ใหม่ทันที - เพิ่ม await เพื่อรอให้โหลดเสร็จ
+      // โหลดข้อมูลผู้ใช้ใหม่
       await fetchUsers();
       
     } catch (err) {
