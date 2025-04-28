@@ -137,7 +137,7 @@ const AdminPage = () => {
       
       console.log('Sending data to server:', JSON.stringify(requestData, null, 2));
       
-      // เรียก API สำหรับเพิ่มผู้ใช้
+      // เรียก API สำหรับเพิ่มผู้ใช้ - ใช้ direct fetch แทน axios หรือ service
       const token = localStorage.getItem('token');
       console.log('Using token:', token ? 'Token exists' : 'No token');
       
@@ -155,6 +155,7 @@ const AdminPage = () => {
         }
       }
       
+      // ลองตรงๆ ไม่ผ่าน authService
       const response = await fetch('https://license-plate-system-production.up.railway.app/auth/create-user', {
         method: 'POST',
         headers: {
