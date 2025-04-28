@@ -65,7 +65,7 @@ const handleUpdateRole = async () => {
     
     console.log('Updating role for user:', selectedUser.id, 'to', selectedRole);
     
-    const result = await authService.updateUserRole(selectedUser.id, selectedRole);
+    await authService.updateUserRole(selectedUser.id, selectedRole);
     
     // อัพเดทข้อมูลในหน้า
     setUsers(users.map(user => {
@@ -106,7 +106,7 @@ const handleAddUser = async (e) => {
     }
     
     // ใช้ authService.createUser แทน
-    const result = await authService.createUser(
+    const userData = await authService.createUser(
       newUsername, 
       newPassword, 
       newEmail && newEmail.trim() !== '' ? newEmail.trim() : null, 
@@ -123,7 +123,7 @@ const handleAddUser = async (e) => {
     setShowAddUserModal(false);
     
     // แสดงข้อความสำเร็จ
-    setSuccessMessage(`เพิ่มผู้ใช้ ${result.username || 'ใหม่'} เรียบร้อยแล้ว`);
+    setSuccessMessage(`เพิ่มผู้ใช้ ${userData.username || 'ใหม่'} เรียบร้อยแล้ว`);
     
     // โหลดข้อมูลผู้ใช้ใหม่
     await fetchUsers();
