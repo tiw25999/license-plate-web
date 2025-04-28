@@ -123,7 +123,7 @@ const AdminPage = () => {
         throw new Error('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
       }
       
-      // สร้างข้อมูลที่จะส่งไป - ตรงกับ UserCreate class ในฝั่ง API
+      // ตรวจสอบจากโค้ด auth.py - ต้องตรงกับ UserCreate class ด้านใน
       const requestData = {
         username: newUsername,
         password: newPassword,
@@ -140,6 +140,20 @@ const AdminPage = () => {
       // เรียก API สำหรับเพิ่มผู้ใช้
       const token = localStorage.getItem('token');
       console.log('Using token:', token ? 'Token exists' : 'No token');
+      
+      // การดีบักเพิ่มเติม - ตรวจสอบค่า token
+      if (token) {
+        try {
+          const tokenParts = token.split('.');
+          if (tokenParts.length === 3) {
+            // ดึงข้อมูลจาก token payload (ส่วนกลาง)
+            const payload = JSON.parse(atob(tokenParts[1]));
+            console.log('Token payload:', payload);
+          }
+        } catch (err) {
+          console.error('Error parsing token:', err);
+        }
+      }
       
       const response = await fetch('https://license-plate-system-production.up.railway.app/auth/create-user', {
         method: 'POST',
