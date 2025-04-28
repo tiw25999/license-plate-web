@@ -128,6 +128,7 @@ const handleAddUser = async (e) => {
     const requestData = {
       username: newUsername,
       password: newPassword,
+      confirm_password: newPassword, // เพิ่มบรรทัดนี้ เพื่อให้ตรงกับที่ backend คาดหวัง
       role: newRole
     };
     
