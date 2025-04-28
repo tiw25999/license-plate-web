@@ -54,7 +54,7 @@ const AdminPage = () => {
     return <Navigate to="/" replace />;
   }
   
-// ฟังก์ชันสำหรับอัพเดตสิทธิ์ผู้ใช้ - แก้ไขส่วนที่มี ESLint error
+// ฟังก์ชันสำหรับอัพเดตสิทธิ์ผู้ใช้
 const handleUpdateRole = async () => {
   if (!selectedUser) return;
   
@@ -65,26 +65,7 @@ const handleUpdateRole = async () => {
     
     console.log('Updating role for user:', selectedUser.id, 'to', selectedRole);
     
-    const token = localStorage.getItem('token');
-    const response = await fetch('https://license-plate-system-production.up.railway.app/auth/update-role', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        user_id: selectedUser.id,
-        role: selectedRole
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || `HTTP error! status: ${response.status}`);
-    }
-    
-    // แก้ไขส่วนนี้ - ไม่จำเป็นต้องเก็บค่า result ถ้าไม่ได้ใช้
-    await response.json();
+    const result = await authService.updateUserRole(selectedUser.id, selectedRole);
     
     // อัพเดทข้อมูลในหน้า
     setUsers(users.map(user => {
@@ -124,40 +105,13 @@ const handleAddUser = async (e) => {
       throw new Error('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
     }
     
-    // สร้างข้อมูลที่จะส่งไป
-    const requestData = {
-      username: newUsername,
-      password: newPassword,
-      confirm_password: newPassword, // เพิ่มบรรทัดนี้ เพื่อให้ตรงกับที่ backend คาดหวัง
-      role: newRole
-    };
-    
-    // ใส่ email เฉพาะเมื่อมีค่าและไม่ใช่ string ว่าง
-    if (newEmail && newEmail.trim() !== '') {
-      requestData.email = newEmail.trim();
-    }
-    
-    const token = localStorage.getItem('token');
-    
-    // ลองใช้ fetch แบบปรับปรุงใหม่
-    const response = await fetch('https://license-plate-system-production.up.railway.app/auth/create-user', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestData)
-    });
-    
-    // ตรวจสอบสถานะก่อน
-    if (!response.ok) {
-      // อ่าน error message จาก response
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-    
-    // อ่านข้อมูลหลังจากตรวจสอบว่าไม่มีข้อผิดพลาดแล้ว
-    const resultData = await response.json();
+    // ใช้ authService.createUser แทน
+    const result = await authService.createUser(
+      newUsername, 
+      newPassword, 
+      newEmail && newEmail.trim() !== '' ? newEmail.trim() : null, 
+      newRole
+    );
     
     // รีเซ็ตข้อมูลฟอร์ม
     setNewUsername('');
@@ -169,7 +123,7 @@ const handleAddUser = async (e) => {
     setShowAddUserModal(false);
     
     // แสดงข้อความสำเร็จ
-    setSuccessMessage(`เพิ่มผู้ใช้ ${resultData.username || 'ใหม่'} เรียบร้อยแล้ว`);
+    setSuccessMessage(`เพิ่มผู้ใช้ ${result.username || 'ใหม่'} เรียบร้อยแล้ว`);
     
     // โหลดข้อมูลผู้ใช้ใหม่
     await fetchUsers();
@@ -191,26 +145,8 @@ const handleDeleteUser = async () => {
     setError('');
     setSuccessMessage('');
     
-    // เรียก API สำหรับลบผู้ใช้
-    const token = localStorage.getItem('token');
-    const response = await fetch(`https://license-plate-system-production.up.railway.app/auth/delete-user`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        user_id: userToDelete.id
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || `HTTP error! status: ${response.status}`);
-    }
-    
-    // ใช้ response แต่ไม่ต้องเก็บค่า
-    await response.json();
+    // เรียกใช้ authService.deleteUser
+    await authService.deleteUser(userToDelete.id);
     
     // ลบผู้ใช้ออกจาก state
     setUsers(users.filter(user => user.id !== userToDelete.id));

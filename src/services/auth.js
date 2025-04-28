@@ -189,7 +189,6 @@ export const authService = {
       console.log('Request payload:', data);
       console.log('Request headers:', { 'Authorization': `Bearer ${token.substring(0, 20)}...` });
       
-      // ใช้ fetch API แทน axios เพื่อทดสอบดูว่ามีผลต่างกันหรือไม่
       const response = await fetch(`${API_URL}/auth/update-role`, {
         method: 'POST',
         headers: {
@@ -214,6 +213,98 @@ export const authService = {
     } catch (error) {
       console.error('Error updating user role:', error);
       throw error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
+    }
+  },
+  
+  // สร้างผู้ใช้ใหม่ (สำหรับ admin)
+  createUser: async (username, password, email = null, role = 'member') => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+      
+      // สร้างข้อมูลที่จะส่งไป
+      const data = {
+        username,
+        password,
+        confirm_password: password,
+        role
+      };
+      
+      // ใส่ email เฉพาะเมื่อมีค่า
+      if (email) {
+        data.email = email;
+      }
+      
+      console.log('Creating user with data:', JSON.stringify(data));
+      
+      const response = await fetch(`${API_URL}/auth/create-user`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        let errorMessage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || JSON.stringify(errorData);
+        } catch {
+          const errorText = await response.text();
+          errorMessage = errorText || `HTTP error! status: ${response.status}`;
+        }
+        console.error('Error response:', errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      const responseData = await response.json();
+      console.log('Create user response:', responseData);
+      
+      return responseData;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error.message || 'ไม่สามารถสร้างผู้ใช้ได้';
+    }
+  },
+  
+  // ลบผู้ใช้ (สำหรับ admin)
+  deleteUser: async (userId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token found');
+      
+      console.log('Deleting user with ID:', userId);
+      
+      const response = await fetch(`${API_URL}/auth/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_id: userId
+        })
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(errorText || `HTTP error! status: ${response.status}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('Delete user response:', responseData);
+      
+      return responseData;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error.message || 'ไม่สามารถลบผู้ใช้ได้';
     }
   }
 };
