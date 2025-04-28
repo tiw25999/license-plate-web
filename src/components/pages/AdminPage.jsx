@@ -54,56 +54,57 @@ const AdminPage = () => {
     return <Navigate to="/" replace />;
   }
   
-  // ฟังก์ชันสำหรับอัพเดตสิทธิ์ผู้ใช้
-  const handleUpdateRole = async () => {
-    if (!selectedUser) return;
+// ฟังก์ชันสำหรับอัพเดตสิทธิ์ผู้ใช้ - แก้ไขส่วนที่มี ESLint error
+const handleUpdateRole = async () => {
+  if (!selectedUser) return;
+  
+  try {
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
     
-    try {
-      setLoading(true);
-      setError('');
-      setSuccessMessage('');
-      
-      console.log('Updating role for user:', selectedUser.id, 'to', selectedRole);
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://license-plate-system-production.up.railway.app/auth/update-role', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          user_id: selectedUser.id,
-          role: selectedRole
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      // อัพเดทข้อมูลในหน้า
-      setUsers(users.map(user => {
-        if (user.id === selectedUser.id) {
-          return { ...user, role: selectedRole };
-        }
-        return user;
-      }));
-      
-      setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.username} เป็น ${selectedRole} เรียบร้อยแล้ว`);
-      
-      // ปิด modal
-      setSelectedUser(null);
-    } catch (err) {
-      console.error('Error updating role:', err);
-      setError('ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้: ' + (err.message || ''));
-    } finally {
-      setLoading(false);
+    console.log('Updating role for user:', selectedUser.id, 'to', selectedRole);
+    
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://license-plate-system-production.up.railway.app/auth/update-role', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        user_id: selectedUser.id,
+        role: selectedRole
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP error! status: ${response.status}`);
     }
-  };
+    
+    // แก้ไขส่วนนี้ - ไม่จำเป็นต้องเก็บค่า result ถ้าไม่ได้ใช้
+    await response.json();
+    
+    // อัพเดทข้อมูลในหน้า
+    setUsers(users.map(user => {
+      if (user.id === selectedUser.id) {
+        return { ...user, role: selectedRole };
+      }
+      return user;
+    }));
+    
+    setSuccessMessage(`อัพเดทสิทธิ์ผู้ใช้ ${selectedUser.username} เป็น ${selectedRole} เรียบร้อยแล้ว`);
+    
+    // ปิด modal
+    setSelectedUser(null);
+  } catch (err) {
+    console.error('Error updating role:', err);
+    setError('ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้: ' + (err.message || ''));
+  } finally {
+    setLoading(false);
+  }
+};
   
 // ฟังก์ชันสำหรับเพิ่มผู้ใช้ - แก้ไขแล้ว
 const handleAddUser = async (e) => {
