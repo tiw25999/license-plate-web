@@ -123,7 +123,7 @@ const AdminPage = () => {
         throw new Error('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
       }
       
-      // สร้างข้อมูลที่จะส่งไปโดยกำหนดค่าที่แน่นอนว่าจะส่งอะไรบ้าง
+      // สร้างข้อมูลที่จะส่งไป - ตรงกับ UserCreate class ในฝั่ง API
       const requestData = {
         username: newUsername,
         password: newPassword,
@@ -135,10 +135,12 @@ const AdminPage = () => {
         requestData.email = newEmail.trim();
       }
       
-      console.log('Sending data to server:', JSON.stringify(requestData));
+      console.log('Sending data to server:', JSON.stringify(requestData, null, 2));
       
       // เรียก API สำหรับเพิ่มผู้ใช้
       const token = localStorage.getItem('token');
+      console.log('Using token:', token ? 'Token exists' : 'No token');
+      
       const response = await fetch('https://license-plate-system-production.up.railway.app/auth/create-user', {
         method: 'POST',
         headers: {
@@ -150,7 +152,8 @@ const AdminPage = () => {
       
       // อ่านตัว response ก่อนเพื่อดูข้อมูลดิบ
       const responseText = await response.text();
-      console.log('Response from server:', responseText);
+      console.log('Raw response from server:', responseText);
+      console.log('Response status:', response.status);
       
       if (!response.ok) {
         throw new Error(responseText || `HTTP error! status: ${response.status}`);
@@ -160,6 +163,7 @@ const AdminPage = () => {
       let resultData;
       try {
         resultData = JSON.parse(responseText);
+        console.log('Parsed response data:', resultData);
       } catch (e) {
         console.error('Error parsing JSON response:', e);
         resultData = { message: 'สร้างผู้ใช้สำเร็จ แต่ไม่สามารถอ่านข้อมูลตอบกลับได้' };
