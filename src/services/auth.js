@@ -187,32 +187,19 @@ export const authService = {
       };
       
       console.log('Request payload:', data);
-      console.log('Request headers:', { 'Authorization': `Bearer ${token.substring(0, 20)}...` });
       
-      const response = await fetch(`${API_URL}/auth/update-role`, {
-        method: 'POST',
+      const response = await authClient.post('/auth/update-role', data, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      console.log('Response status:', response.status);
+      console.log('Update role response:', response.data);
       
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Error response:', errorData);
-        throw new Error(errorData || `HTTP error! status: ${response.status}`);
-      }
-      
-      const responseData = await response.json();
-      console.log('Update role response:', responseData);
-      
-      return responseData;
+      return response.data;
     } catch (error) {
       console.error('Error updating user role:', error);
-      throw error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
+      throw error.response?.data?.detail || error.message || 'ไม่สามารถอัพเดทสิทธิ์ผู้ใช้ได้';
     }
   },
   
@@ -237,37 +224,21 @@ export const authService = {
       
       console.log('Creating user with data:', JSON.stringify(data));
       
-      const response = await fetch(`${API_URL}/auth/create-user`, {
-        method: 'POST',
+      const response = await authClient.post('/auth/create-user', data, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      console.log('Response status:', response.status);
+      console.log('Create user response:', response.data);
       
-      if (!response.ok) {
-        let errorMessage;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.detail || JSON.stringify(errorData);
-        } catch {
-          const errorText = await response.text();
-          errorMessage = errorText || `HTTP error! status: ${response.status}`;
-        }
-        console.error('Error response:', errorMessage);
-        throw new Error(errorMessage);
-      }
-      
-      const responseData = await response.json();
-      console.log('Create user response:', responseData);
-      
-      return responseData;
+      return response.data;
     } catch (error) {
       console.error('Error creating user:', error);
-      throw error.message || 'ไม่สามารถสร้างผู้ใช้ได้';
+      if (error.response && error.response.status === 404) {
+        throw new Error('API endpoint not found. Please check server configuration.');
+      }
+      throw error.response?.data?.detail || error.message || 'ไม่สามารถสร้างผู้ใช้ได้';
     }
   },
   
@@ -279,32 +250,20 @@ export const authService = {
       
       console.log('Deleting user with ID:', userId);
       
-      const response = await fetch(`${API_URL}/auth/delete-user`, {
-        method: 'POST',
+      const response = await authClient.post('/auth/delete-user', {
+        user_id: userId
+      }, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          user_id: userId
-        })
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      console.log('Response status:', response.status);
+      console.log('Delete user response:', response.data);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(errorText || `HTTP error! status: ${response.status}`);
-      }
-      
-      const responseData = await response.json();
-      console.log('Delete user response:', responseData);
-      
-      return responseData;
+      return response.data;
     } catch (error) {
       console.error('Error deleting user:', error);
-      throw error.message || 'ไม่สามารถลบผู้ใช้ได้';
+      throw error.response?.data?.detail || error.message || 'ไม่สามารถลบผู้ใช้ได้';
     }
   }
 };
