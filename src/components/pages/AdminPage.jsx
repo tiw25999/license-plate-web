@@ -141,8 +141,9 @@ const AdminPage = () => {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP error! status: ${response.status}`);
+        const errorData = await response.text();
+        console.error("Error response:", errorData);
+        throw new Error(errorData || `HTTP error! status: ${response.status}`);
       }
       
       const resultData = await response.json();
@@ -159,8 +160,8 @@ const AdminPage = () => {
       // แสดงข้อความสำเร็จ
       setSuccessMessage(`เพิ่มผู้ใช้ ${resultData.username || 'ใหม่'} เรียบร้อยแล้ว`);
       
-      // โหลดข้อมูลผู้ใช้ใหม่
-      fetchUsers();
+      // โหลดข้อมูลผู้ใช้ใหม่ทันที - เพิ่ม await เพื่อรอให้โหลดเสร็จ
+      await fetchUsers();
       
     } catch (err) {
       console.error('Error adding user:', err);
@@ -466,8 +467,8 @@ const AdminPage = () => {
             </>
           )}
           
-{/* Modal ยืนยันการลบผู้ใช้ */}
-{showDeleteModal && userToDelete && (
+          {/* Modal ยืนยันการลบผู้ใช้ */}
+          {showDeleteModal && userToDelete && (
             <>
               <div 
                 className="modal fade show" 
