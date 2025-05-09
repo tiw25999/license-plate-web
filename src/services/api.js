@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // เปลี่ยน URL ให้ตรงกับ backend ใหม่
-const API_URL = 'https://license-plate-system-production.up.railway.app/';
+const API_URL = 'http://localhost:8000';
 
 // สร้าง axios instance
 const apiClient = axios.create({

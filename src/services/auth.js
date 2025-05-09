@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // URL เดียวกับที่ใช้ใน api.js
-const API_URL = 'https://license-plate-system-production.up.railway.app/';
+const API_URL = 'http://localhost:8000';
 
 // สร้าง axios instance สำหรับ auth
 const authClient = axios.create({
