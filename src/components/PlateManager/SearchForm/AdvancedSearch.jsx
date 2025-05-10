@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 /**
  * Component ค้นหาขั้นสูงแบบรวมในฟอร์มเดียว
  */
+// ... import เหมือนเดิม ...
+
 const AdvancedSearch = ({ 
   initialSearchTerm,
   initialStartDate,
@@ -11,95 +13,65 @@ const AdvancedSearch = ({
   initialStartHour,
   initialEndHour,
   initialProvince,
-  initialIdCamera,
   initialCameraName,
   provinces = [],
-  cameras = [],
   loadingOptions = false,
   onSearch,
   onReset,
   loading
 }) => {
-  // State สำหรับการค้นหา
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
-  // State สำหรับช่วงวันที่
   const [startDate, setStartDate] = useState(initialStartDate || '');
   const [endDate, setEndDate] = useState(initialEndDate || '');
-  // State สำหรับช่วงเวลา
   const [startHour, setStartHour] = useState(initialStartHour || '');
   const [endHour, setEndHour] = useState(initialEndHour || '');
-  // State สำหรับจังหวัดและกล้อง
   const [province, setProvince] = useState(initialProvince || '');
-  const [idCamera, setIdCamera] = useState(initialIdCamera || '');
   const [cameraName, setCameraName] = useState(initialCameraName || '');
-  // State สำหรับข้อผิดพลาด
   const [error, setError] = useState(null);
 
-  // ฟังก์ชันสำหรับจัดการการ submit
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // สร้างพารามิเตอร์การค้นหา
+
     let searchParams = {};
-    
-    // พารามิเตอร์ทะเบียนรถ
-    if (searchTerm.trim()) {
-      searchParams.searchTerm = searchTerm.trim();
-    }
-    
-    // พารามิเตอร์ช่วงวันที่
+    if (searchTerm.trim()) searchParams.searchTerm = searchTerm.trim();
     if (startDate && endDate) {
       searchParams.startDate = startDate;
       searchParams.endDate = endDate;
     } else if (startDate || endDate) {
-      // ถ้ามีแค่อันใดอันหนึ่ง ให้แจ้งเตือน
       setError('กรุณาระบุทั้งวันที่เริ่มต้นและวันที่สิ้นสุด');
       return;
     }
-    
-    // พารามิเตอร์ช่วงเวลา (ถ้ามีการระบุ)
+
     if (startHour && endHour) {
-      // ตรวจสอบความถูกต้องของช่วงเวลา
-      const startHourNum = parseInt(startHour);
-      const endHourNum = parseInt(endHour);
-      
-      if (isNaN(startHourNum) || isNaN(endHourNum) || startHourNum < 0 || startHourNum > 23 || endHourNum < 0 || endHourNum > 23) {
+      const start = parseInt(startHour);
+      const end = parseInt(endHour);
+      if (isNaN(start) || isNaN(end) || start < 0 || start > 23 || end < 0 || end > 23) {
         setError('ช่วงเวลาต้องเป็นตัวเลข 0-23');
         return;
       }
-      
-      if (startHourNum > endHourNum) {
+      if (start > end) {
         setError('เวลาเริ่มต้นต้องน้อยกว่าหรือเท่ากับเวลาสิ้นสุด');
         return;
       }
-      
       searchParams.startHour = startHour;
       searchParams.endHour = endHour;
     } else if (startHour || endHour) {
-      // ถ้ามีแค่อันใดอันหนึ่ง ให้แจ้งเตือน
       setError('กรุณาระบุทั้งเวลาเริ่มต้นและเวลาสิ้นสุด');
       return;
     }
-    
-    // พารามิเตอร์จังหวัดและกล้อง
+
     if (province) searchParams.province = province;
-    if (idCamera) searchParams.id_camera = idCamera;
     if (cameraName) searchParams.camera_name = cameraName;
-    
-    // ตรวจสอบว่ามีพารามิเตอร์การค้นหาอย่างน้อย 1 อย่าง
+
     if (Object.keys(searchParams).length === 0) {
       setError('กรุณาระบุเงื่อนไขการค้นหาอย่างน้อย 1 รายการ');
       return;
     }
-    
-    // ล้างข้อผิดพลาด
+
     setError(null);
-    
-    // เรียกใช้ callback การค้นหา
     onSearch(searchParams);
   };
 
-  // ฟังก์ชันสำหรับล้างฟอร์ม
   const handleReset = () => {
     setSearchTerm('');
     setStartDate('');
@@ -107,7 +79,6 @@ const AdvancedSearch = ({
     setStartHour('');
     setEndHour('');
     setProvince('');
-    setIdCamera('');
     setCameraName('');
     setError(null);
     onReset();
@@ -115,7 +86,7 @@ const AdvancedSearch = ({
 
   return (
     <div className="advanced-search-container">
-      {/* ช่องค้นหาทะเบียน */}
+      {/* ค้นหาเลขทะเบียน */}
       <div className="mb-4">
         <label htmlFor="searchTerm" className="form-label fw-bold mb-2">ค้นหาเลขทะเบียน</label>
         <div className="input-group">
@@ -132,7 +103,7 @@ const AdvancedSearch = ({
         <small className="text-muted">สามารถค้นหาด้วยเลขทะเบียนบางส่วนได้</small>
       </div>
 
-      {/* ค้นหาตามจังหวัด */}
+      {/* จังหวัด */}
       <div className="card mb-4">
         <div className="card-header bg-light">
           <i className="bi bi-geo-alt me-2"></i> ค้นหาตามจังหวัด
@@ -165,51 +136,27 @@ const AdvancedSearch = ({
         </div>
       </div>
 
-      {/* ค้นหาตามกล้อง */}
+      {/* ชื่อกล้อง */}
       <div className="card mb-4">
         <div className="card-header bg-light">
-          <i className="bi bi-camera me-2"></i> ค้นหาตามกล้อง
+          <i className="bi bi-camera me-2"></i> ค้นหาตามชื่อกล้อง
         </div>
         <div className="card-body">
-          <div className="row">
-            <div className="col-md-6 mb-3">
-              <label htmlFor="idCamera" className="form-label">รหัสกล้อง</label>
-              {loadingOptions ? (
-                <div className="form-control text-center py-2">
-                  <div className="spinner-border spinner-border-sm text-secondary" role="status">
-                    <span className="visually-hidden">กำลังโหลด...</span>
-                  </div>
-                </div>
-              ) : (
-                <select
-                  id="idCamera"
-                  className="form-select"
-                  value={idCamera}
-                  onChange={(e) => setIdCamera(e.target.value)}
-                >
-                  <option value="">-- เลือกรหัสกล้อง --</option>
-                  {cameras.map((cam) => (
-                    <option key={cam.id_camera} value={cam.id_camera}>{cam.id_camera}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="col-md-6 mb-3">
-              <label htmlFor="cameraName" className="form-label">ชื่อกล้อง</label>
-              <input
-                type="text"
-                id="cameraName"
-                className="form-control"
-                placeholder="ป้อนชื่อกล้องที่ต้องการค้นหา..."
-                value={cameraName}
-                onChange={(e) => setCameraName(e.target.value)}
-              />
-            </div>
+          <div className="mb-3">
+            <label htmlFor="cameraName" className="form-label">ชื่อกล้อง</label>
+            <input
+              type="text"
+              id="cameraName"
+              className="form-control"
+              placeholder="ป้อนชื่อกล้องที่ต้องการค้นหา..."
+              value={cameraName}
+              onChange={(e) => setCameraName(e.target.value)}
+            />
           </div>
         </div>
       </div>
 
-      {/* ค้นหาตามช่วงวันที่ */}
+      {/* วันที่ */}
       <div className="card mb-4">
         <div className="card-header bg-light">
           <i className="bi bi-calendar me-2"></i> ค้นหาตามช่วงวันที่
@@ -239,13 +186,10 @@ const AdvancedSearch = ({
               />
             </div>
           </div>
-          <div className="form-text">
-            รูปแบบ: วัน/เดือน/ปี (เช่น 10/01/2023 - 31/12/2023)
-          </div>
         </div>
       </div>
 
-      {/* ค้นหาตามช่วงเวลา */}
+      {/* เวลา */}
       <div className="card mb-4">
         <div className="card-header bg-light">
           <i className="bi bi-clock me-2"></i> ค้นหาตามช่วงเวลา (ชั่วโมง)
@@ -279,18 +223,12 @@ const AdvancedSearch = ({
               />
             </div>
           </div>
-          <div className="form-text">
-            กรอกชั่วโมงในรูปแบบ 24 ชั่วโมง (0-23) ถ้าไม่กรอกจะค้นหาทุกช่วงเวลา
-          </div>
         </div>
       </div>
 
-      {/* แสดงข้อผิดพลาด */}
-      {error && (
-        <div className="alert alert-danger">{error}</div>
-      )}
+      {/* error + ปุ่มค้นหา */}
+      {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* ปุ่มค้นหาและล้างการค้นหา */}
       <div className="row mt-4">
         <div className="col-12 d-flex justify-content-center">
           <button 
@@ -330,10 +268,8 @@ AdvancedSearch.propTypes = {
   initialStartHour: PropTypes.string,
   initialEndHour: PropTypes.string,
   initialProvince: PropTypes.string,
-  initialIdCamera: PropTypes.string,
   initialCameraName: PropTypes.string,
   provinces: PropTypes.array,
-  cameras: PropTypes.array,
   loadingOptions: PropTypes.bool,
   onSearch: PropTypes.func.isRequired,
   onReset: PropTypes.func.isRequired,

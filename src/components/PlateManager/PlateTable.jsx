@@ -14,30 +14,24 @@ const PlateTable = ({
   canDelete = false,
   onDelete
 }) => {
-  // ถ้าไม่มีข้อมูล ไม่ต้องแสดงตาราง
   if (!plates || plates.length === 0) {
     return <div className="alert alert-info">ไม่พบข้อมูลทะเบียน</div>;
   }
 
-  // ฟังก์ชันสำหรับแยกวันที่และเวลา
   const splitDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return { date: '-', time: '-' };
-    
-    // แยกวันที่และเวลา
     const parts = dateTimeStr.split(' ');
     if (parts.length === 2) {
       return {
-        date: parts[0],  // "DD/MM/YYYY"
-        time: parts[1]   // "HH:MM:SS"
+        date: parts[0],
+        time: parts[1]
       };
     }
-    
     return { date: dateTimeStr, time: '-' };
   };
 
   return (
     <>
-      {/* ตัวเลือกการแสดงผล */}
       <div className="d-flex justify-content-between align-items-center mb-2">
         <div className="total-records">
           แสดง <strong>{totalRecords}</strong> รายการ
@@ -66,8 +60,7 @@ const PlateTable = ({
                 <th style={{ width: '12%' }}>จังหวัด</th>
                 <th style={{ width: '12%' }}>วันที่บันทึก</th>
                 <th style={{ width: '12%' }}>เวลาที่บันทึก</th>
-                <th style={{ width: '12%' }}>รหัสกล้อง</th>
-                <th style={{ width: '15%' }}>ชื่อกล้อง</th>
+                <th style={{ width: '20%' }}>ชื่อกล้อง</th>
                 {canDelete && <th style={{ width: '8%' }}>จัดการ</th>}
               </tr>
             </thead>
@@ -81,7 +74,6 @@ const PlateTable = ({
                     <td>{plate.province || '-'}</td>
                     <td>{date}</td>
                     <td>{time}</td>
-                    <td>{plate.id_camera || '-'}</td>
                     <td>{plate.camera_name || '-'}</td>
                     {canDelete && (
                       <td>
