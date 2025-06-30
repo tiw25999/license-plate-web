@@ -9,24 +9,26 @@ const LoginPage = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const { login, isAuthenticated } = useAuth();
+
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
-  
-  // ถ้า login แล้วให้ redirect ไปหน้าหลัก
+
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={user?.role === 'admin' ? '/admin' : '/'} replace />;
   }
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     try {
-      const success = await login(username, password, rememberMe);
-      if (success) {
-        navigate('/');
+      const userData = await login(username, password, rememberMe);
+      console.log("🧪 userData:", userData); // ✅ สำคัญที่สุด
+      if (userData) {
+        const nextPath = userData.role === 'admin' ? '/admin' : '/';
+        console.log("✅ Redirecting to:", nextPath); // ✅ ดูว่า redirect ไปไหน
+        navigate(nextPath);
       }
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
@@ -34,7 +36,8 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
-  
+
+
   return (
     <div className="container mt-5">
       <div className="row justify-content-center">
@@ -45,7 +48,6 @@ const LoginPage = () => {
             </div>
             <div className="card-body">
               {error && <Alert type="danger" message={error} />}
-              
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                   <label htmlFor="username" className="form-label">ชื่อผู้ใช้</label>
@@ -58,7 +60,6 @@ const LoginPage = () => {
                     required
                   />
                 </div>
-                
                 <div className="mb-3">
                   <label htmlFor="password" className="form-label">รหัสผ่าน</label>
                   <input
@@ -70,7 +71,6 @@ const LoginPage = () => {
                     required
                   />
                 </div>
-                
                 <div className="mb-3 form-check">
                   <input
                     type="checkbox"
@@ -81,7 +81,6 @@ const LoginPage = () => {
                   />
                   <label className="form-check-label" htmlFor="rememberMe">จดจำฉัน</label>
                 </div>
-                
                 <button 
                   type="submit" 
                   className="btn btn-primary w-100"
@@ -90,8 +89,6 @@ const LoginPage = () => {
                   {loading ? 'กำลังดำเนินการ...' : 'เข้าสู่ระบบ'}
                 </button>
               </form>
-              
-              {/* ลบส่วนลิงก์ไปหน้าสมัครสมาชิก */}
             </div>
           </div>
         </div>

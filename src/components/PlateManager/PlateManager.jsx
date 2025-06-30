@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { usePagination } from '../../hooks/usePagination';
 import { usePlates } from '../../hooks/usePlates';
+import { useAuth } from '../../contexts/AuthContext'; // ✅ เพิ่มตรงนี้
 import ApiStatus from './ApiStatus';
 import Pagination from './Pagination';
 import './PlateManager.css';
@@ -10,6 +11,8 @@ import SearchForm from './SearchForm';
 import StatusDisplay from './StatusDisplay';
 
 const PlateManager = () => {
+  const { user } = useAuth(); // ✅ ดึง user จาก context
+
   const {
     allPlates,
     loading,
@@ -160,6 +163,7 @@ const PlateManager = () => {
             getPlateNumber={getPlateNumber}
             totalRecords={totalRecords}
             onItemsPerPageChange={changeItemsPerPage}
+            canDelete={user?.role === 'admin'} // ✅ เปิดปุ่มลบเฉพาะ admin
             onDelete={handleDeletePlate}
           />
 

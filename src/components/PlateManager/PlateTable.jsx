@@ -1,12 +1,9 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-/**
- * Component สำหรับแสดงตารางข้อมูลทะเบียนรถ
- */
-const PlateTable = ({ 
-  plates, 
-  currentPage, 
+const PlateTable = ({
+  plates,
+  currentPage,
   itemsPerPage,
   getPlateNumber,
   totalRecords,
@@ -21,13 +18,10 @@ const PlateTable = ({
   const splitDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return { date: '-', time: '-' };
     const parts = dateTimeStr.split(' ');
-    if (parts.length === 2) {
-      return {
-        date: parts[0],
-        time: parts[1]
-      };
-    }
-    return { date: dateTimeStr, time: '-' };
+    return {
+      date: parts[0] || '-',
+      time: parts[1] || '-'
+    };
   };
 
   return (
@@ -38,8 +32,8 @@ const PlateTable = ({
         </div>
         <div className="items-per-page">
           <label className="me-2">แสดง:</label>
-          <select 
-            className="form-select form-select-sm" 
+          <select
+            className="form-select form-select-sm"
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(parseInt(e.target.value))}
           >
@@ -68,19 +62,18 @@ const PlateTable = ({
               {plates.map((plate, index) => {
                 const { date, time } = splitDateTime(plate.timestamp);
                 return (
-                  <tr key={index}>
+                  <tr key={plate.id || index}>
                     <td className="text-center">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                    <td className="plate-number">{getPlateNumber(plate)}</td>
+                    <td>{getPlateNumber(plate)}</td>
                     <td>{plate.province || '-'}</td>
                     <td>{date}</td>
                     <td>{time}</td>
                     <td>{plate.camera_name || '-'}</td>
                     {canDelete && (
                       <td>
-                        <button 
+                        <button
                           className="btn btn-sm btn-danger"
                           onClick={() => onDelete(plate.id)}
-                          title="ลบรายการนี้"
                         >
                           <i className="bi bi-trash"></i>
                         </button>

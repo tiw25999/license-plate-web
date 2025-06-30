@@ -1,69 +1,67 @@
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React from 'react';
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
 import './App.css';
-import PlateManager from './components/PlateManager';
-import AdminPage from './components/pages/AdminPage';
-import LoginPage from './components/pages/LoginPage';
 import { AuthProvider } from './contexts/AuthContext';
 
-// Component สำหรับป้องกันหน้าที่ต้องการ login
-const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
-};
+// Pages
+import PlateManager from './components/PlateManager';
+import LoginPage from './components/pages/LoginPage';
+import AdminPage from './components/Admin/AdminPage';
 
-// Component สำหรับป้องกันหน้า admin
-const AdminRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  
-  if (!token) {
-    return <Navigate to="/login" />;
-  }
-  
-  if (user.role !== 'admin') {
-    return <Navigate to="/" />;
-  }
-  
-  return children;
-};
+// Route Guards
+import PrivateRoute from './routes/PrivateRoute';
+import { AdminRoute } from './routes/AdminRoute';
+
+// Layouts
+import GuestLayout from './layouts/GuestLayout';
+import UserLayout from './layouts/UserLayout';
+import AdminLayout from './layouts/AdminLayout';
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="App">
-          <nav className="navbar navbar-dark bg-dark">
-            <div className="container">
-              <a href="/" className="navbar-brand mb-0 h1">License Plate Detection System</a>
-            </div>
-          </nav>
-          
-          <Routes>
-            <Route path="/" element={<PlateManager />} />
-            <Route path="/login" element={<LoginPage />} />
-            {/* ลบเส้นทางไปยังหน้าสมัครสมาชิก */}
-            <Route 
-              path="/admin" 
-              element={
-                <AdminRoute>
-                  <AdminPage />
-                </AdminRoute>
-              } 
-            />
-            {/* ใช้ PrivateRoute สำหรับหน้าที่ต้องการการเข้าสู่ระบบ */}
-            <Route 
-              path="/protected-page" 
-              element={
-                <PrivateRoute>
+        <Routes>
+          {/* Public (Guest) */}
+          <Route
+            path="/login"
+            element={
+              <GuestLayout>
+                <LoginPage />
+              </GuestLayout>
+            }
+          />
+
+          {/* Protected (Logged-in users only) */}
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <UserLayout>
                   <PlateManager />
-                </PrivateRoute>
-              } 
-            />
-          </Routes>
-        </div>
+                </UserLayout>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Admin only */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminLayout>
+                  <AdminPage />
+                </AdminLayout>
+              </AdminRoute>
+            }
+          />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Router>
     </AuthProvider>
   );

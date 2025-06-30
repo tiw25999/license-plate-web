@@ -1,10 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService } from '../services/auth';
 
-// สร้าง context
 const AuthContext = createContext();
 
-// Provider component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,98 +12,87 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       try {
         setLoading(true);
-        
         const token = localStorage.getItem('token');
-        if (!token) {
+        const refreshToken = localStorage.getItem('refresh_token');
+
+        if (!token && !refreshToken) {
           setUser(null);
           return;
         }
-        
-        // ตรวจสอบการหมดอายุ
-        if (authService.isTokenExpired()) {
-          await authService.logout();
-          setUser(null);
-          return;
+
+        if (authService.isTokenExpired() && refreshToken) {
+          try {
+            await authService.refreshAccessToken();
+          } catch (err) {
+            console.warn('Token refresh failed:', err);
+            await authService.logout();
+            setUser(null);
+            return;
+          }
         }
-        
-        // ถ้ามี token ให้ดึงข้อมูลผู้ใช้จาก localStorage ก่อน
+
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
-        
+
         try {
-          // ตรวจสอบความถูกต้องของ token กับ server
-          const userData = await authService.fetchCurrentUser();
+          const userData = await authService.fetchCurrentUser?.();
           if (userData) {
             setUser(userData);
-            // อัปเดตข้อมูลใน localStorage
             localStorage.setItem('user', JSON.stringify(userData));
           }
-        } catch (err) {
-          console.error("Error validating token:", err);
-          // ถ้าเกิดข้อผิดพลาด ให้ใช้ข้อมูลจาก localStorage ต่อไป
+        } catch (e) {
+          console.warn('Failed to verify token:', e);
         }
       } catch (err) {
-        setError(err.message);
+        setError(err.message || 'Auth error');
       } finally {
         setLoading(false);
       }
     };
-    
+
     checkAuth();
   }, []);
 
-  // ฟังก์ชัน login
   const login = async (username, password, remember = true) => {
     try {
       setLoading(true);
       setError(null);
-      
       const response = await authService.login(username, password);
-      
-      // กำหนดวันหมดอายุตามการเลือก "จดจำฉัน"
-      const expiryDate = new Date();
-      if (remember) {
-        expiryDate.setDate(expiryDate.getDate() + 30); // 30 วัน
-      } else {
-        // ถ้าไม่ได้เลือก "จดจำฉัน" ให้หมดอายุเมื่อปิดเบราวเซอร์
-        // หรือจะกำหนดให้อยู่ได้ 1 วัน
-        expiryDate.setDate(expiryDate.getDate() + 1);
-      }
-      
-      localStorage.setItem('tokenExpiry', expiryDate.toISOString());
-      
-      setUser({
-        id: response.id,
+      const userData = {
+        id: response.user_id,
         username: response.username,
-        email: response.email,
         role: response.role
-      });
-      
-      return true;
+      };
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + (remember ? 7 : 1));
+      localStorage.setItem('tokenExpiry', expiryDate.toISOString());
+
+      return userData; // ✅ คืน userData ให้ LoginPage ใช้
     } catch (err) {
       setError(err.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-      return false;
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // ฟังก์ชัน signup
   const signup = async (username, password, confirmPassword, email = null) => {
     try {
       setLoading(true);
       setError(null);
-      
       await authService.signup(username, password, confirmPassword, email);
-      setUser(authService.getCurrentUser());
-      
-      // เพิ่มการกำหนดวันหมดอายุเหมือน login
+      const userData = authService.getCurrentUser();
+      setUser(userData);
+
       const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 30); // 30 วัน
+      expiryDate.setDate(expiryDate.getDate() + 7);
       localStorage.setItem('tokenExpiry', expiryDate.toISOString());
-      
+
       return true;
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
@@ -115,7 +102,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ฟังก์ชัน logout
   const logout = async () => {
     try {
       setLoading(true);
@@ -128,27 +114,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ฟังก์ชันตรวจสอบว่าเป็น admin หรือไม่
-  const isAdmin = () => {
-    return user && user.role === 'admin';
-  };
+  const isAdmin = () => user && user.role === 'admin';
 
-  // ฟังก์ชันตรวจสอบสิทธิ์
   const hasPermission = (requiredRole) => {
     if (!user) return false;
-    
-    if (requiredRole === 'admin') {
-      return user.role === 'admin';
-    }
-    
-    if (requiredRole === 'member') {
-      return user.role === 'admin' || user.role === 'member';
-    }
-    
+    if (requiredRole === 'admin') return user.role === 'admin';
+    if (requiredRole === 'member') return ['admin', 'member'].includes(user.role);
     return true;
   };
 
-  // ค่าที่ส่งไปยัง context
   const value = {
     user,
     loading,
@@ -161,10 +135,13 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-// Custom hook สำหรับการใช้งาน context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
