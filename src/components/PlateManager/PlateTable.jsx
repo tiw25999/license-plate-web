@@ -15,12 +15,34 @@ const PlateTable = ({
     return <div className="alert alert-info">ไม่พบข้อมูลทะเบียน</div>;
   }
 
-  const splitDateTime = (dateTimeStr) => {
-    if (!dateTimeStr) return { date: '-', time: '-' };
-    const parts = dateTimeStr.split(' ');
+  /**
+   * แยกหรือแปลง timestamp ให้เป็น date/time แบบไทย
+   * รองรับทั้ง ISO string หรือ "DD/MM/YYYY HH:MM:SS"
+   */
+  const formatThaiDateTime = (ts) => {
+    if (!ts) return { date: '-', time: '-' };
+
+    // พยายาม parse เป็น JS Date (รองรับ ISO)
+    const dt = new Date(ts);
+    if (!isNaN(dt)) {
+      const date = dt.toLocaleDateString('th-TH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      const time = dt.toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      return { date, time };
+    }
+
+    // ถ้า parse ไม่ได้ ให้ fallback แยกจาก string โดยใช้ space
+    const parts = ts.split(' ');
     return {
       date: parts[0] || '-',
-      time: parts[1] || '-'
+      time: parts[1] || '-',
     };
   };
 
@@ -30,16 +52,16 @@ const PlateTable = ({
         <div className="total-records">
           แสดง <strong>{totalRecords}</strong> รายการ
         </div>
-        <div className="items-per-page">
-          <label className="me-2">แสดง:</label>
+        <div className="items-per-page d-flex align-items-center">
+          <label className="me-2 mb-0">แสดง:</label>
           <select
             className="form-select form-select-sm"
             value={itemsPerPage}
-            onChange={(e) => onItemsPerPageChange(parseInt(e.target.value))}
+            onChange={(e) => onItemsPerPageChange(parseInt(e.target.value, 10))}
           >
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
           </select>
         </div>
       </div>
@@ -59,11 +81,14 @@ const PlateTable = ({
               </tr>
             </thead>
             <tbody>
-              {plates.map((plate, index) => {
-                const { date, time } = splitDateTime(plate.timestamp);
+              {plates.map((plate, idx) => {
+                // คำนวณลำดับบนหน้า
+                const seq = (currentPage - 1) * itemsPerPage + idx + 1;
+                // แปลง timestamp
+                const { date, time } = formatThaiDateTime(plate.timestamp);
                 return (
-                  <tr key={plate.id || index}>
-                    <td className="text-center">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                  <tr key={plate.id || idx}>
+                    <td className="text-center">{seq}</td>
                     <td>{getPlateNumber(plate)}</td>
                     <td>{plate.province || '-'}</td>
                     <td>{date}</td>
@@ -98,7 +123,7 @@ PlateTable.propTypes = {
   totalRecords: PropTypes.number.isRequired,
   onItemsPerPageChange: PropTypes.func.isRequired,
   canDelete: PropTypes.bool,
-  onDelete: PropTypes.func
+  onDelete: PropTypes.func,
 };
 
 export default PlateTable;

@@ -7,7 +7,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
 // Interceptor แนบ token
@@ -22,7 +22,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Interceptor สำหรับ refresh token เมื่อเจอ 401
+// Interceptor สำหรับ refresh token เมื่อเจอ 401
 apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -31,13 +31,16 @@ apiClient.interceptors.response.use(
         const refresh_token = localStorage.getItem('refresh_token');
         if (!refresh_token) throw new Error('No refresh token');
 
-        const res = await apiClient.post('/auth/refresh_token', { refresh_token });
-        const newToken = res.data.access_token;
+        // เรียก refresh_token endpoint
+        const refreshRes = await apiClient.post('/auth/refresh_token', { refresh_token });
+        const newToken = refreshRes.data.access_token;
         localStorage.setItem('token', newToken);
 
+        // retry request เก่าด้วย token ใหม่
         error.config.headers['Authorization'] = `Bearer ${newToken}`;
         return apiClient(error.config);
       } catch (err) {
+        // ถ้า refresh ล้มเหลว ให้ล้าง storage และพาไปหน้า login
         localStorage.clear();
         window.location.href = '/login';
       }
@@ -47,79 +50,100 @@ apiClient.interceptors.response.use(
 );
 
 export const plateService = {
+  // ดึงป้ายที่ verify แล้วทั้งหมด (sort ก่อน slice)
   getLatestPlates: async (limit = 500) => {
-    const response = await apiClient.get('/plates/get_plates');
-    return response.data.slice(0, limit);
-  },
-
-  searchPlates: async (params) => {
-    const queryParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined && value !== '') {
-        queryParams.append(key, value);
-      }
-    }
-    const response = await apiClient.get(`/plates/search?${queryParams}`);
-    return response.data;
-  },
-
-  addPlate: async (plateNumber, province, id_camera, camera_name) => {
-    const response = await apiClient.post('/plates/add_plate', null, {
-      params: { plate_number: plateNumber, province, id_camera, camera_name }
+    const res = await apiClient.get('/plates/get_plates');
+    const arr = Array.isArray(res.data) ? res.data : [res.data];
+    // เรียง by timestamp ใหม่สุดก่อน
+    arr.sort((a, b) => {
+      const ta = new Date(a.timestamp || a.created_at).getTime();
+      const tb = new Date(b.timestamp || b.created_at).getTime();
+      return tb - ta;
     });
-    return response.data;
+    return arr.slice(0, limit);
   },
 
+  // ค้นหาป้ายที่ verify แล้ว ตามเงื่อนไข
+  searchPlates: async (params) => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== '') {
+        q.append(key, val);
+      }
+    });
+    const res = await apiClient.get(`/plates/search?${q.toString()}`);
+    return res.data;
+  },
+
+  // เพิ่ม plate candidate
+  addPlate: async (plateNumber, province, id_camera, camera_name) => {
+    const payload = {
+      plate_number: plateNumber,
+      province,
+      id_camera,
+      camera_name
+    };
+    const res = await apiClient.post('/plates/add_plate', payload);
+    return res.data;
+  },
+
+  // ดึงกล้อง
   getCameras: async () => {
-    const response = await apiClient.get('/plates/get_cameras');
-    return response.data;
+    const res = await apiClient.get('/plates/get_cameras');
+    return res.data;
   },
 
+  // ดึง watchlists
   getWatchlists: async () => {
-    const response = await apiClient.get('/plates/get_watchlists');
-    return response.data;
+    const res = await apiClient.get('/plates/get_watchlists');
+    return res.data;
   },
 
-  getAlerts: async (status = null) => {
+  // ดึง alerts
+  getAlerts: async (status = '') => {
     const url = status ? `/plates/get_alerts?status=${status}` : '/plates/get_alerts';
-    const response = await apiClient.get(url);
-    return response.data;
+    const res = await apiClient.get(url);
+    return res.data;
   },
 
+  // ตรวจสอบสุขภาพ API
   checkHealth: async () => {
-    const response = await apiClient.get('/health');
-    return response.data;
+    const res = await apiClient.get('/health');
+    return res.data;
   },
 
+  // ดึงรายชื่อจังหวัดจากป้ายที่ verify แล้ว
   getProvinces: async () => {
-    const response = await apiClient.get('/plates/get_plates');
-    const provinces = [...new Set(
-      response.data.map(p => p.province).filter(p => p)
-    )];
+    const res = await apiClient.get('/plates/get_plates');
+    const provinces = Array.from(
+      new Set(res.data.map(p => p.province).filter(p => p))
+    );
     return provinces;
   },
 
-  // ✅ เพิ่ม: ใช้กับ VerifyPlateManager
+  // ดึง candidates รอ verify
   getCandidates: async () => {
-    const response = await apiClient.get('/plates/candidates');
-    return response.data;
+    const res = await apiClient.get('/plates/candidates');
+    return res.data;
   },
 
+  // verify candidate
   verifyPlate: async (candidateId) => {
-    const response = await apiClient.post(`/plates/verify_plate/${candidateId}`);
-    return response.data;
+    const res = await apiClient.post(`/plates/verify_plate/${candidateId}`, null);
+    return res.data;
   },
 
-  deletePlate: async (plateId) => {
-    const response = await apiClient.delete(`/plates/delete_plate/${plateId}`);
-    return response.data;
-  },
-
+  // reject candidate
   rejectCandidate: async (candidateId) => {
-    const response = await apiClient.delete(`/plates/candidates/${candidateId}`);
-    return response.data;
+    const res = await apiClient.delete(`/plates/candidates/${candidateId}`);
+    return res.data;
   },
-  
+
+  // **ลบป้ายที่ verify แล้ว** (admin)
+  deletePlate: async (plateId) => {
+    const res = await apiClient.delete(`/plates/delete_plate/${plateId}`);
+    return res.data;
+  },
 };
 
 export default plateService;

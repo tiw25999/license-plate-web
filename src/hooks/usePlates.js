@@ -1,126 +1,104 @@
 import { useCallback, useEffect, useState } from 'react';
-import { plateService } from '../services/api';
-import { formatDate } from '../utils/dateUtils';
+import { plateService }               from '../services/api';
+import { formatDate }                 from '../utils/dateUtils';
 
 /**
  * Custom hook สำหรับจัดการข้อมูลทะเบียนรถและการค้นหา
  */
 export const usePlates = () => {
-  // State
-  const [allPlates, setAllPlates] = useState([]); 
-  const [displayPlates, setDisplayPlates] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [apiStatus, setApiStatus] = useState(null);
+  // ─── State ────────────────────────────────────────────────────────────
+  const [allPlates,        setAllPlates]        = useState([]);
+  const [displayPlates,    setDisplayPlates]    = useState([]);
+  const [loading,          setLoading]          = useState(false);
+  const [error,            setError]            = useState(null);
+  const [apiStatus,        setApiStatus]        = useState(null);
   const [lastSearchParams, setLastSearchParams] = useState({});
-  
-  // ตัวแปรสำหรับการค้นหา
-  const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [startMonth, setStartMonth] = useState('');
-  const [endMonth, setEndMonth] = useState('');
-  const [startYear, setStartYear] = useState('');
-  const [endYear, setEndYear] = useState('');
-  const [searchMode, setSearchMode] = useState('quick');
-  
-  // ตัวแปรสำหรับการแบ่งหน้า
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [totalRecords, setTotalRecords] = useState(0);
 
-  // อัพเดตข้อมูลที่แสดงตามหน้าปัจจุบัน
+  // search/filter
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate,  setStartDate]  = useState('');
+  const [endDate,    setEndDate]    = useState('');
+  const [searchMode, setSearchMode] = useState('quick');
+
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages,  setTotalPages]  = useState(1);
+  const [itemsPerPage,setItemsPerPage]= useState(50);
+  const [totalRecords,setTotalRecords]= useState(0);
+
+  // ─── Helpers ──────────────────────────────────────────────────────────
   const updateDisplayPlates = useCallback((plates, page) => {
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    setDisplayPlates(plates.slice(startIndex, endIndex));
+    const start = (page - 1) * itemsPerPage;
+    const end   = start + itemsPerPage;
+    setDisplayPlates(plates.slice(start, end));
   }, [itemsPerPage]);
 
-
-  const getPlateNumber = useCallback((plateObj) => {
-    if (!plateObj) return '-';
-    // ในฐานข้อมูลใหม่ใช้ field 'plate' แทน 'plate_number'
-    if (plateObj.plate) return plateObj.plate;
-    if (plateObj.plate_number) return plateObj.plate_number;
-    return JSON.stringify(plateObj);
+  const getPlateNumber = useCallback(p => {
+    if (!p) return '-';
+    return p.plate || p.plate_number || JSON.stringify(p);
   }, []);
 
-  // ฟังก์ชันสำหรับโหลดรายการทะเบียนล่าสุด
+  // ─── โหลดรายการล่าสุด ─────────────────────────────────────────────────
   const loadLatestPlates = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // รีเซ็ตค่าการค้นหา
+
+      // รีเซ็ต search state
       setSearchTerm('');
       setStartDate('');
       setEndDate('');
-      setStartMonth('');
-      setEndMonth('');
-      setStartYear('');
-      setEndYear('');
       setLastSearchParams({});
-      
+
+      // ดึง 300 เรคคอร์ดแรกจาก server
       const data = await plateService.getLatestPlates(300);
-      
-      const platesArray = Array.isArray(data) ? data : [data];
-      
-      // ไม่ต้องเรียงลำดับเพราะ backend ส่งมาเรียงแล้ว
-      setAllPlates(platesArray);
-      setTotalRecords(platesArray.length);
-      
-      // คำนวณจำนวนหน้าทั้งหมด
-      const pages = Math.ceil(platesArray.length / itemsPerPage);
+      const arr  = Array.isArray(data) ? data : [data];
+
+      setAllPlates(arr);
+      setTotalRecords(arr.length);
+
+      const pages = Math.ceil(arr.length / itemsPerPage);
       setTotalPages(pages || 1);
-      
-      // เซ็ตข้อมูลสำหรับหน้าแรก
       setCurrentPage(1);
-      updateDisplayPlates(platesArray, 1);
-      
-      return platesArray;
+
+      updateDisplayPlates(arr, 1);
+      return arr;
     } catch (err) {
-      const errorMsg = 'ไม่สามารถโหลดข้อมูลทะเบียนได้: ' + (err.message || err);
-      setError(errorMsg);
+      setError('ไม่สามารถโหลดข้อมูลทะเบียนได้: ' + (err.message || err));
       setAllPlates([]);
+      setDisplayPlates([]);
+      setTotalRecords(0);
+      setTotalPages(1);
       return [];
     } finally {
       setLoading(false);
     }
   }, [itemsPerPage, updateDisplayPlates]);
 
-  // ค้นหาทะเบียนด้วยพารามิเตอร์
-  const searchPlatesWithParams = useCallback(async (params = {}) => {
-    // สร้าง search params ตามโหมดการค้นหา
-    let searchParams = { ...params, limit: 300 };
-    
-    // ถ้าไม่มีค่าการค้นหาเลย ให้โหลดข้อมูลล่าสุด
-    if (!Object.values(searchParams).some(value => value)) {
+  // ─── ค้นหาด้วยพารามิเตอร์ ────────────────────────────────────────────
+  const searchPlatesWithParams = useCallback(async params => {
+    const p = { ...params, limit: 300 };
+    if (!Object.values(p).some(v => v)) {
       return loadLatestPlates();
     }
-    
+
     try {
       setLoading(true);
       setError(null);
-      setLastSearchParams(searchParams);
-      
-      const data = await plateService.searchPlates(searchParams);
-      
-      const searchResults = Array.isArray(data) ? data : [data];
-      
-      // ไม่ต้องเรียงลำดับเพราะ backend ส่งมาเรียงแล้ว
-      setAllPlates(searchResults);
-      setTotalRecords(searchResults.length);
-      
-      // คำนวณจำนวนหน้าทั้งหมด
-      const pages = Math.ceil(searchResults.length / itemsPerPage);
+      setLastSearchParams(p);
+
+      const data = await plateService.searchPlates(p);
+      const arr  = Array.isArray(data) ? data : [data];
+
+      setAllPlates(arr);
+      setTotalRecords(arr.length);
+
+      const pages = Math.ceil(arr.length / itemsPerPage);
       setTotalPages(Math.max(1, pages));
-      
-      // เซ็ตข้อมูลสำหรับหน้าแรก
       setCurrentPage(1);
-      updateDisplayPlates(searchResults, 1);
-      
-      return searchResults;
+
+      updateDisplayPlates(arr, 1);
+      return arr;
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการค้นหา');
       setAllPlates([]);
@@ -134,57 +112,44 @@ export const usePlates = () => {
     }
   }, [itemsPerPage, updateDisplayPlates, loadLatestPlates]);
 
-  // ค้นหาทะเบียนตามช่วงเวลา
-  const searchLastNDays = useCallback((days) => {
+  // ─── ค้นหาในช่วง N วันที่ผ่านมา ───────────────────────────────────────
+  const searchLastNDays = useCallback(async days => {
     const today = new Date();
-    const pastDate = new Date();
-    pastDate.setDate(today.getDate() - (days - 1)); // -1 เพื่อให้นับรวมวันนี้ด้วย
-    
-    const endDateStr = formatDate(today);
-    const startDateStr = formatDate(pastDate);
-    
-    setStartDate(startDateStr);
-    setEndDate(endDateStr);
+    const past  = new Date();
+    past.setDate(today.getDate() - (days - 1));
+
+    setStartDate(formatDate(past));
+    setEndDate(formatDate(today));
     setSearchMode('advanced');
-    
-    // เรียกค้นหาอัตโนมัติ
+
     return searchPlatesWithParams({
-      startDate: startDateStr,
-      endDate: endDateStr
+      start_date: formatDate(past),
+      end_date:   formatDate(today)
     });
   }, [searchPlatesWithParams]);
-  
-  // ฟังก์ชันสำหรับเพิ่มทะเบียนใหม่
-const addPlate = useCallback(async (plateNumber, province, id_camera, camera_name) => {
-  try {
-    setLoading(true);
-    setError(null);
-    
-    await plateService.addPlate(plateNumber, province, id_camera, camera_name);
-    
-    // โหลดข้อมูลใหม่
-    await loadLatestPlates();
-    
-    return true;
-  } catch (err) {
-    setError(err.message || 'ไม่สามารถเพิ่มทะเบียนได้');
-    return false;
-  } finally {
-    setLoading(false);
-  }
-}, [loadLatestPlates]);
-  
-  // ลบทะเบียน
-  const deletePlate = useCallback(async (plateId) => {
+
+  // ─── เพิ่ม / ลบ / ตรวจสถานะ API ────────────────────────────────────────
+  const addPlate = useCallback(async (pn, prov, camId, camName) => {
     try {
       setLoading(true);
       setError(null);
-      
-      await plateService.deletePlate(plateId);
-      
-      // โหลดข้อมูลใหม่
+      await plateService.addPlate(pn, prov, camId, camName);
       await loadLatestPlates();
-      
+      return true;
+    } catch (err) {
+      setError(err.message || 'ไม่สามารถเพิ่มทะเบียนได้');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadLatestPlates]);
+
+  const deletePlate = useCallback(async id => {
+    try {
+      setLoading(true);
+      setError(null);
+      await plateService.deletePlate(id);
+      await loadLatestPlates();
       return true;
     } catch (err) {
       setError(err.message || 'ไม่สามารถลบทะเบียนได้');
@@ -194,25 +159,17 @@ const addPlate = useCallback(async (plateNumber, province, id_camera, camera_nam
     }
   }, [loadLatestPlates]);
 
-  // ตรวจสอบสถานะ API
+  // ─── ตรวจสุขภาพ API ─────────────────────────────────────────────────
   const checkApiStatus = useCallback(async () => {
     try {
-      const status = await plateService.checkHealth();
-      setApiStatus(status.status === 'ok' ? 'online' : 'issue');
-    } catch (error) {
+      const st = await plateService.checkHealth();
+      setApiStatus(st.status === 'ok' ? 'online' : 'issue');
+    } catch {
       setApiStatus('offline');
     }
   }, []);
 
-  // ตรวจสอบสถานะ API เมื่อโหลดครั้งแรก
-  useEffect(() => {
-    checkApiStatus();
-  }, [checkApiStatus]);
-
-  // เรียกข้อมูลเมื่อโหลดหน้าแรก
-  useEffect(() => {
-    loadLatestPlates();
-  }, [loadLatestPlates]);
+  useEffect(() => { checkApiStatus(); }, [checkApiStatus]);
 
   return {
     allPlates,
@@ -224,10 +181,6 @@ const addPlate = useCallback(async (plateNumber, province, id_camera, camera_nam
     searchTerm,
     startDate,
     endDate,
-    startMonth,
-    endMonth,
-    startYear,
-    endYear,
     searchMode,
     currentPage,
     totalPages,
@@ -236,10 +189,6 @@ const addPlate = useCallback(async (plateNumber, province, id_camera, camera_nam
     setSearchTerm,
     setStartDate,
     setEndDate,
-    setStartMonth,
-    setEndMonth,
-    setStartYear,
-    setEndYear,
     setSearchMode,
     setItemsPerPage,
     updateDisplayPlates,
@@ -247,8 +196,8 @@ const addPlate = useCallback(async (plateNumber, province, id_camera, camera_nam
     searchPlatesWithParams,
     searchLastNDays,
     getPlateNumber,
-    addPlate,     // เพิ่มฟังก์ชันนี้
-    deletePlate   // เพิ่มฟังก์ชันนี้
+    addPlate,
+    deletePlate
   };
 };
 

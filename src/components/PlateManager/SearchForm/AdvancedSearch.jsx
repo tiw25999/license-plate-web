@@ -139,11 +139,11 @@ const AdvancedSearch = ({
       {/* ชื่อกล้อง */}
       <div className="card mb-4">
         <div className="card-header bg-light">
-          <i className="bi bi-camera me-2"></i> ค้นหาตามชื่อกล้อง
+          <i className="bi bi-camera me-2"></i> ค้นหาตามตำแหน่งกล้อง
         </div>
         <div className="card-body">
           <div className="mb-3">
-            <label htmlFor="cameraName" className="form-label">ชื่อกล้อง</label>
+            <label htmlFor="cameraName" className="form-label">ตำแหน่งกล้อง</label>
             <input
               type="text"
               id="cameraName"

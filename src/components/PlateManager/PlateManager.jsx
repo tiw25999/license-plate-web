@@ -1,18 +1,30 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useDebounce } from '../../hooks/useDebounce';
-import { usePagination } from '../../hooks/usePagination';
-import { usePlates } from '../../hooks/usePlates';
-import { useAuth } from '../../contexts/AuthContext'; // ✅ เพิ่มตรงนี้
-import ApiStatus from './ApiStatus';
-import Pagination from './Pagination';
-import './PlateManager.css';
-import PlateTable from './PlateTable';
-import SearchForm from './SearchForm';
+// src/components/PlateManager/PlateManager.jsx
+
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useMemo,
+  useContext
+} from 'react';
+import { useDebounce }    from '../../hooks/useDebounce';
+import { usePagination }  from '../../hooks/usePagination';
+import { usePlates }      from '../../hooks/usePlates';
+import { useAuth }        from '../../contexts/AuthContext';
+import { RefreshContext } from '../../contexts/RefreshContext';
+
+import ApiStatus     from './ApiStatus';
+import SearchForm    from './SearchForm';
 import StatusDisplay from './StatusDisplay';
+import PlateTable    from './PlateTable';
+import Pagination    from './Pagination';
+import './PlateManager.css';
 
-const PlateManager = () => {
-  const { user } = useAuth(); // ✅ ดึง user จาก context
+export default function PlateManager() {
+  const { refreshCount } = useContext(RefreshContext);
+  const { user }         = useAuth();
 
+  // ─── ดึงข้อมูลหลักจาก usePlates ───────────────────────────────────
   const {
     allPlates,
     loading,
@@ -23,72 +35,58 @@ const PlateManager = () => {
     searchPlatesWithParams,
     searchLastNDays,
     getPlateNumber,
-    deletePlate
+    // deletePlate ยังเรียกได้ แต่จะไม่ส่งเข้า PlateTable
   } = usePlates();
 
+  // ─── search/filter state ────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [startMonth, setStartMonth] = useState('');
-  const [endMonth, setEndMonth] = useState('');
-  const [startYear, setStartYear] = useState('');
-  const [endYear, setEndYear] = useState('');
-  const [startHour, setStartHour] = useState('');
-  const [endHour, setEndHour] = useState('');
-  const [province, setProvince] = useState('');
-  const [idCamera, setIdCamera] = useState('');
+  const [startDate,  setStartDate]  = useState('');
+  const [endDate,    setEndDate]    = useState('');
+  const [startHour,  setStartHour]  = useState('');
+  const [endHour,    setEndHour]    = useState('');
+  const [province,   setProvince]   = useState('');
+  const [idCamera,   setIdCamera]   = useState('');
   const [cameraName, setCameraName] = useState('');
   const [searchMode, setSearchMode] = useState('quick');
 
-  const {
-    currentPage,
-    totalPages,
-    itemsPerPage,
-    displayItems: displayPlates,
-    totalItems: totalRecords,
-    changeItemsPerPage,
-    goToNextPage,
-    goToPrevPage,
-    goToPage
-  } = usePagination(allPlates, 50);
-
-  const debouncedSearch = useDebounce(async (term) => {
+  // ─── debounced quick search ─────────────────────────────────────────
+  const debouncedSearch = useDebounce(async term => {
     if (term.length >= 1) {
-      await searchPlatesWithParams({ searchTerm: term });
-    } else if (term === '') {
+      await searchPlatesWithParams({ search_term: term });
+    } else {
       loadLatestPlates();
     }
   }, 500);
 
-  const handleSearchTermChange = useCallback((term) => {
+  const handleSearchTermChange = useCallback(term => {
     setSearchTerm(term);
     debouncedSearch(term);
   }, [debouncedSearch]);
 
-  const handleAdvancedSearch = useCallback((params) => {
-    if (params.searchTerm !== undefined) setSearchTerm(params.searchTerm);
-    if (params.startDate !== undefined) setStartDate(params.startDate);
-    if (params.endDate !== undefined) setEndDate(params.endDate);
-    if (params.startMonth !== undefined) setStartMonth(params.startMonth);
-    if (params.endMonth !== undefined) setEndMonth(params.endMonth);
-    if (params.startYear !== undefined) setStartYear(params.startYear);
-    if (params.endYear !== undefined) setEndYear(params.endYear);
-    if (params.startHour !== undefined) setStartHour(params.startHour);
-    if (params.endHour !== undefined) setEndHour(params.endHour);
-    if (params.province !== undefined) setProvince(params.province);
-    if (params.id_camera !== undefined) setIdCamera(params.id_camera);
-    if (params.camera_name !== undefined) setCameraName(params.camera_name);
+  const handleAdvancedSearch = useCallback(params => {
+    setSearchTerm(params.search_term || '');
+    setStartDate(params.start_date || '');
+    setEndDate(params.end_date || '');
+    setStartHour(params.start_hour || '');
+    setEndHour(params.end_hour || '');
+    setProvince(params.province || '');
+    setIdCamera(params.id_camera || '');
+    setCameraName(params.camera_name || '');
     searchPlatesWithParams(params);
   }, [searchPlatesWithParams]);
+
+  const handleDateRangeSearch = useCallback(days => {
+    searchLastNDays(days);
+  }, [searchLastNDays]);
+
+  const handleSearchModeChange = useCallback(mode => {
+    setSearchMode(mode);
+  }, []);
 
   const handleResetSearch = useCallback(() => {
     setSearchTerm('');
     setStartDate('');
     setEndDate('');
-    setStartMonth('');
-    setEndMonth('');
-    setStartYear('');
-    setEndYear('');
     setStartHour('');
     setEndHour('');
     setProvince('');
@@ -97,35 +95,48 @@ const PlateManager = () => {
     loadLatestPlates();
   }, [loadLatestPlates]);
 
-  const handleDateRangeSearch = useCallback((days) => {
-    searchLastNDays(days);
-  }, [searchLastNDays]);
-
-  const handleSearchModeChange = useCallback((mode) => {
-    setSearchMode(mode);
-  }, []);
-
-  const handleDeletePlate = useCallback(async (plateId) => {
-    if (window.confirm('คุณต้องการลบทะเบียนนี้ใช่หรือไม่?')) {
-      try {
-        await deletePlate(plateId);
-        loadLatestPlates();
-      } catch (error) {
-        console.error('Error deleting plate:', error);
-      }
-    }
-  }, [deletePlate, loadLatestPlates]);
-
+  // ─── load on mount & whenever bumpRefresh() is called ───────────────
   useEffect(() => {
     loadLatestPlates();
-  }, [loadLatestPlates]);
+  }, [loadLatestPlates, refreshCount]);
+
+  // ─── pagination บน allPlates ──────────────────────────────────────
+  const {
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    displayItems,
+    totalItems: totalRecords,
+    changeItemsPerPage,
+    goToNextPage,
+    goToPrevPage,
+    goToPage
+  } = usePagination(allPlates, 50);
+
+  // ─── format timestamp → Thai date/time ─────────────────────────────
+  const formattedPlates = useMemo(() => {
+    return displayItems.map(p => {
+      const dt = p.timestamp ? new Date(p.timestamp) : null;
+      const dateStr = dt
+        ? dt.toLocaleDateString('th-TH-u-ca-gregory', {
+            day:   '2-digit',
+            month: '2-digit',
+            year:  'numeric',
+          })
+        : '-';
+      const timeStr = dt
+        ? dt.toLocaleTimeString('th-TH', {
+            hour:   '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
+        : '-';
+      return { ...p, dateStr, timeStr };
+    });
+  }, [displayItems]);
 
   return (
     <div className="container mt-4 plate-manager">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">ระบบจัดการทะเบียนรถ</h2>
-      </div>
-
       <ApiStatus status={apiStatus} />
 
       <SearchForm
@@ -133,10 +144,6 @@ const PlateManager = () => {
         onSearchTermChange={handleSearchTermChange}
         startDate={startDate}
         endDate={endDate}
-        startMonth={startMonth}
-        endMonth={endMonth}
-        startYear={startYear}
-        endYear={endYear}
         startHour={startHour}
         endHour={endHour}
         province={province}
@@ -154,19 +161,17 @@ const PlateManager = () => {
 
       <StatusDisplay loading={loading} error={error} />
 
-      {!loading && !error && displayPlates.length > 0 && (
+      {!loading && !error && formattedPlates.length > 0 && (
         <>
           <PlateTable
-            plates={displayPlates}
+            plates={formattedPlates}
             currentPage={currentPage}
             itemsPerPage={itemsPerPage}
-            getPlateNumber={getPlateNumber}
             totalRecords={totalRecords}
+            getPlateNumber={getPlateNumber}
+            canDelete={false}               // ปิดปุ่มลบชั่วคราว
             onItemsPerPageChange={changeItemsPerPage}
-            canDelete={user?.role === 'admin'} // ✅ เปิดปุ่มลบเฉพาะ admin
-            onDelete={handleDeletePlate}
           />
-
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -179,11 +184,9 @@ const PlateManager = () => {
         </>
       )}
 
-      {!loading && !error && displayPlates.length === 0 && (
+      {!loading && !error && formattedPlates.length === 0 && (
         <div className="alert alert-info">ไม่พบข้อมูลทะเบียน</div>
       )}
     </div>
   );
-};
-
-export default PlateManager;
+}

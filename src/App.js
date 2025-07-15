@@ -1,3 +1,4 @@
+// App.js
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React from 'react';
@@ -6,7 +7,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
 
-// Pages
+// Pages / Components
 import PlateManager from './components/PlateManager';
 import LoginPage from './components/pages/LoginPage';
 import AdminPage from './components/Admin/AdminPage';
@@ -35,7 +36,7 @@ function App() {
             }
           />
 
-          {/* Protected (Logged-in users only) */}
+          {/* Protected (User only) */}
           <Route
             path="/"
             element={
@@ -47,13 +48,25 @@ function App() {
             }
           />
 
-          {/* Admin only */}
+          {/* Admin Dashboard */}
           <Route
             path="/admin"
             element={
               <AdminRoute>
                 <AdminLayout>
                   <AdminPage />
+                </AdminLayout>
+              </AdminRoute>
+            }
+          />
+
+          {/* Admin → User Panel */}
+          <Route
+            path="/admin/user-panel"
+            element={
+              <AdminRoute>
+                <AdminLayout>
+                  <PlateManager />
                 </AdminLayout>
               </AdminRoute>
             }
