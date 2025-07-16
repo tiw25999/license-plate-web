@@ -2,13 +2,13 @@ import React, { useState, useEffect, useContext } from 'react';
 import { plateService } from '../../services/api';
 import { RefreshContext } from '../../contexts/RefreshContext';
 
-const SUPABASE_URL = "https://vzmnbpsxkqkennmzlxgr.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6bW5icHN4a3FrZW5ubXpseGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzNDI5ODEsImV4cCI6MjA1NzkxODk4MX0.aFbAyFNWuNkG9FSoxQ-jh7Amr8oZe7bALvCH8SiwLv8";
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const API_URL = process.env.REACT_APP_API_URL;
 
 export default function VerifyPlateManager() {
   const { bumpRefresh } = useContext(RefreshContext);
   const [candidates, setCandidates] = useState([]);
-  const [imageNames, setImageNames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
 
@@ -33,11 +33,14 @@ export default function VerifyPlateManager() {
       ]);
 
       const candidates = Array.isArray(candidateRes) ? candidateRes : [candidateRes];
-      const imageFiles = imageRes.filter(f => f.name.toLowerCase().endsWith('.jpg'));
 
-      // จับคู่ตามลำดับ
+      const imageFiles = imageRes
+        .filter(f => f.name.toLowerCase().endsWith('.jpg'))
+        .reverse();
+
       const enriched = candidates.map((item, index) => ({
         ...item,
+        image_name: imageFiles[index]?.name || null,
         image_url: imageFiles[index]
           ? `${SUPABASE_URL}/storage/v1/object/public/plates/${imageFiles[index].name}`
           : null,
@@ -54,26 +57,71 @@ export default function VerifyPlateManager() {
   const handleVerify = async (id) => {
     setProcessingId(id);
     try {
+      const target = candidates.find(p => p.id === id);
+
+      // 🔥 ลบภาพก่อน
+      if (target?.image_name) {
+        const res = await fetch(`${API_URL}/plates/delete_image/${target.image_name}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Image delete failed:", errorText);
+          throw new Error("ลบภาพไม่สำเร็จ");
+        }
+
+        const result = await res.json();
+        console.log("Delete image result:", result);
+      }
+
+      // ✅ ยืนยันป้าย
       await plateService.verifyPlate(id);
       bumpRefresh();
       await loadData();
     } catch (err) {
       console.error(err);
-      alert("ไม่สามารถยืนยันได้");
+      alert("ไม่สามารถยืนยันหรือลบรูปภาพได้");
     } finally {
       setProcessingId(null);
     }
   };
 
+
   const handleReject = async (id) => {
     setProcessingId(id);
     try {
+      const target = candidates.find(p => p.id === id);
+
+      if (target?.image_name) {
+        const res = await fetch(`${API_URL}/plates/delete_image/${target.image_name}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Image delete failed:", errorText);
+          throw new Error("ลบภาพไม่สำเร็จ");
+        }
+
+        const result = await res.json();
+        console.log("Delete image result:", result);
+      }
+
       await plateService.rejectCandidate(id);
       bumpRefresh();
       await loadData();
     } catch (err) {
       console.error(err);
-      alert("ไม่สามารถปฏิเสธได้");
+      alert("ไม่สามารถปฏิเสธหรือลบรูปภาพได้");
     } finally {
       setProcessingId(null);
     }
@@ -85,7 +133,11 @@ export default function VerifyPlateManager() {
     <table className="table table-bordered mt-3 align-middle">
       <thead className="table-light">
         <tr>
-          <th>ภาพ</th><th>ทะเบียน</th><th>จังหวัด</th><th>กล้อง</th><th>จัดการ</th>
+          <th>ภาพ</th>
+          <th>ทะเบียน</th>
+          <th>จังหวัด</th>
+          <th>กล้อง</th>
+          <th>จัดการ</th>
         </tr>
       </thead>
       <tbody>
