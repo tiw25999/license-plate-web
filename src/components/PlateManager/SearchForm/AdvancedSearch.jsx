@@ -1,11 +1,11 @@
+// src/components/AdvancedSearch.jsx
+
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
 
 /**
  * Component ค้นหาขั้นสูงแบบรวมในฟอร์มเดียว
  */
-// ... import เหมือนเดิม ...
-
 const AdvancedSearch = ({ 
   initialSearchTerm,
   initialStartDate,
@@ -20,56 +20,65 @@ const AdvancedSearch = ({
   onReset,
   loading
 }) => {
-  const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
-  const [startDate, setStartDate] = useState(initialStartDate || '');
-  const [endDate, setEndDate] = useState(initialEndDate || '');
-  const [startHour, setStartHour] = useState(initialStartHour || '');
-  const [endHour, setEndHour] = useState(initialEndHour || '');
-  const [province, setProvince] = useState(initialProvince || '');
-  const [cameraName, setCameraName] = useState(initialCameraName || '');
-  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm]       = useState(initialSearchTerm   || '');
+  const [startDate,  setStartDate]        = useState(initialStartDate    || '');
+  const [endDate,    setEndDate]          = useState(initialEndDate      || '');
+  const [startHour,  setStartHour]        = useState(initialStartHour    || '');
+  const [endHour,    setEndHour]          = useState(initialEndHour      || '');
+  const [province,   setProvince]         = useState(initialProvince     || '');
+  const [cameraName, setCameraName]       = useState(initialCameraName   || '');
+  const [error,      setError]            = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    let searchParams = {};
-    if (searchTerm.trim()) searchParams.searchTerm = searchTerm.trim();
+    const params = {};
+
+    // ค้นหาเลขทะเบียน (snake_case)
+    if (searchTerm.trim()) {
+      params.search_term = searchTerm.trim();
+    }
+
+    // ช่วงวันที่ (snake_case)
     if (startDate && endDate) {
-      searchParams.startDate = startDate;
-      searchParams.endDate = endDate;
+      params.start_date = startDate;
+      params.end_date   = endDate;
     } else if (startDate || endDate) {
       setError('กรุณาระบุทั้งวันที่เริ่มต้นและวันที่สิ้นสุด');
       return;
     }
 
+    // ช่วงเวลา (snake_case)
     if (startHour && endHour) {
-      const start = parseInt(startHour);
-      const end = parseInt(endHour);
-      if (isNaN(start) || isNaN(end) || start < 0 || start > 23 || end < 0 || end > 23) {
+      const s = parseInt(startHour, 10);
+      const eH = parseInt(endHour, 10);
+      if (isNaN(s) || isNaN(eH) || s < 0 || s > 23 || eH < 0 || eH > 23) {
         setError('ช่วงเวลาต้องเป็นตัวเลข 0-23');
         return;
       }
-      if (start > end) {
+      if (s > eH) {
         setError('เวลาเริ่มต้นต้องน้อยกว่าหรือเท่ากับเวลาสิ้นสุด');
         return;
       }
-      searchParams.startHour = startHour;
-      searchParams.endHour = endHour;
+      params.start_hour = startHour;
+      params.end_hour   = endHour;
     } else if (startHour || endHour) {
       setError('กรุณาระบุทั้งเวลาเริ่มต้นและเวลาสิ้นสุด');
       return;
     }
 
-    if (province) searchParams.province = province;
-    if (cameraName) searchParams.camera_name = cameraName;
+    // จังหวัด + ชื่อกล้อง (snake_case)
+    if (province)   params.province     = province;
+    if (cameraName) params.camera_name  = cameraName;
 
-    if (Object.keys(searchParams).length === 0) {
+    // ต้องมีเงื่อนไขอย่างน้อย 1
+    if (Object.keys(params).length === 0) {
       setError('กรุณาระบุเงื่อนไขการค้นหาอย่างน้อย 1 รายการ');
       return;
     }
 
     setError(null);
-    onSearch(searchParams);
+    onSearch(params);
   };
 
   const handleReset = () => {
@@ -88,9 +97,11 @@ const AdvancedSearch = ({
     <div className="advanced-search-container">
       {/* ค้นหาเลขทะเบียน */}
       <div className="mb-4">
-        <label htmlFor="searchTerm" className="form-label fw-bold mb-2">ค้นหาเลขทะเบียน</label>
+        <label htmlFor="searchTerm" className="form-label fw-bold mb-2">
+          ค้นหาเลขทะเบียน
+        </label>
         <div className="input-group">
-          <span className="input-group-text"><i className="bi bi-search"></i></span>
+          <span className="input-group-text"><i className="bi bi-search" /></span>
           <input
             type="text"
             id="searchTerm"
@@ -106,7 +117,7 @@ const AdvancedSearch = ({
       {/* จังหวัด */}
       <div className="card mb-4">
         <div className="card-header bg-light">
-          <i className="bi bi-geo-alt me-2"></i> ค้นหาตามจังหวัด
+          <i className="bi bi-geo-alt me-2" /> ค้นหาตามจังหวัด
         </div>
         <div className="card-body">
           <div className="row">
@@ -114,9 +125,7 @@ const AdvancedSearch = ({
               <label htmlFor="province" className="form-label">จังหวัด</label>
               {loadingOptions ? (
                 <div className="form-control text-center py-2">
-                  <div className="spinner-border spinner-border-sm text-secondary" role="status">
-                    <span className="visually-hidden">กำลังโหลด...</span>
-                  </div>
+                  <div className="spinner-border spinner-border-sm" role="status" />
                 </div>
               ) : (
                 <select
@@ -139,7 +148,7 @@ const AdvancedSearch = ({
       {/* ชื่อกล้อง */}
       <div className="card mb-4">
         <div className="card-header bg-light">
-          <i className="bi bi-camera me-2"></i> ค้นหาตามตำแหน่งกล้อง
+          <i className="bi bi-camera me-2" /> ค้นหาตามตำแหน่งกล้อง
         </div>
         <div className="card-body">
           <div className="mb-3">
@@ -156,10 +165,10 @@ const AdvancedSearch = ({
         </div>
       </div>
 
-      {/* วันที่ */}
+      {/* ช่วงวันที่ */}
       <div className="card mb-4">
         <div className="card-header bg-light">
-          <i className="bi bi-calendar me-2"></i> ค้นหาตามช่วงวันที่
+          <i className="bi bi-calendar me-2" /> ค้นหาตามช่วงวันที่
         </div>
         <div className="card-body">
           <div className="row">
@@ -189,10 +198,10 @@ const AdvancedSearch = ({
         </div>
       </div>
 
-      {/* เวลา */}
+      {/* ช่วงเวลา (ชั่วโมง) */}
       <div className="card mb-4">
         <div className="card-header bg-light">
-          <i className="bi bi-clock me-2"></i> ค้นหาตามช่วงเวลา (ชั่วโมง)
+          <i className="bi bi-clock me-2" /> ค้นหาตามช่วงเวลา (ชั่วโมง)
         </div>
         <div className="card-body">
           <div className="row">
@@ -203,8 +212,7 @@ const AdvancedSearch = ({
                 id="startHour"
                 className="form-control"
                 placeholder="0-23"
-                min="0"
-                max="23"
+                min="0" max="23"
                 value={startHour}
                 onChange={(e) => setStartHour(e.target.value)}
               />
@@ -216,8 +224,7 @@ const AdvancedSearch = ({
                 id="endHour"
                 className="form-control"
                 placeholder="0-23"
-                min="0"
-                max="23"
+                min="0" max="23"
                 value={endHour}
                 onChange={(e) => setEndHour(e.target.value)}
               />
@@ -226,34 +233,34 @@ const AdvancedSearch = ({
         </div>
       </div>
 
-      {/* error + ปุ่มค้นหา */}
+      {/* แสดง error ถ้ามี */}
       {error && <div className="alert alert-danger">{error}</div>}
 
+      {/* ปุ่มค้นหาและล้าง */}
       <div className="row mt-4">
         <div className="col-12 d-flex justify-content-center">
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="btn btn-primary btn-lg me-2 px-4"
             onClick={handleSubmit}
             disabled={loading}
           >
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                กำลังค้นหา...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-search me-2"></i> ค้นหา
-              </>
-            )}
+            {loading
+              ? <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" />
+                  กำลังค้นหา...
+                </>
+              : <>
+                  <i className="bi bi-search me-2" /> ค้นหา
+                </>
+            }
           </button>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="btn btn-outline-secondary btn-lg px-4"
             onClick={handleReset}
           >
-            <i className="bi bi-x-circle me-2"></i> ล้างการค้นหา
+            <i className="bi bi-x-circle me-2" /> ล้างการค้นหา
           </button>
         </div>
       </div>
@@ -262,18 +269,18 @@ const AdvancedSearch = ({
 };
 
 AdvancedSearch.propTypes = {
-  initialSearchTerm: PropTypes.string,
-  initialStartDate: PropTypes.string,
-  initialEndDate: PropTypes.string,
-  initialStartHour: PropTypes.string,
-  initialEndHour: PropTypes.string,
-  initialProvince: PropTypes.string,
-  initialCameraName: PropTypes.string,
-  provinces: PropTypes.array,
-  loadingOptions: PropTypes.bool,
-  onSearch: PropTypes.func.isRequired,
-  onReset: PropTypes.func.isRequired,
-  loading: PropTypes.bool.isRequired
+  initialSearchTerm:   PropTypes.string,
+  initialStartDate:    PropTypes.string,
+  initialEndDate:      PropTypes.string,
+  initialStartHour:    PropTypes.string,
+  initialEndHour:      PropTypes.string,
+  initialProvince:     PropTypes.string,
+  initialCameraName:   PropTypes.string,
+  provinces:           PropTypes.array,
+  loadingOptions:      PropTypes.bool,
+  onSearch:            PropTypes.func.isRequired,
+  onReset:             PropTypes.func.isRequired,
+  loading:             PropTypes.bool.isRequired,
 };
 
 export default AdvancedSearch;
