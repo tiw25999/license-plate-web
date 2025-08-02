@@ -1,5 +1,3 @@
-// src/components/PlateManager/PlateManager.jsx
-
 import React, {
   useCallback,
   useEffect,
@@ -7,6 +5,7 @@ import React, {
   useMemo,
   useContext
 } from 'react';
+// เส้นทาง import เดียวกันกับโครงสร้างไฟล์ของคุณ
 import { useDebounce }    from '../../hooks/useDebounce';
 import { usePagination }  from '../../hooks/usePagination';
 import { usePlates }      from '../../hooks/usePlates';
@@ -23,8 +22,9 @@ import './PlateManager.css';
 export default function PlateManager() {
   const { refreshCount } = useContext(RefreshContext);
   const { user }         = useAuth();
+  const isAdmin = user?.role === 'admin';
 
-  // ─── ดึงข้อมูลหลักจาก usePlates ───────────────────────────────────
+  // ─── ดึงข้อมูลจาก usePlates ────────────────────────────────────────
   const {
     allPlates,
     loading,
@@ -35,10 +35,10 @@ export default function PlateManager() {
     searchPlatesWithParams,
     searchLastNDays,
     getPlateNumber,
-    // deletePlate ยังเรียกได้ แต่จะไม่ส่งเข้า PlateTable
+    deletePlate            // ← เพิ่มฟังก์ชันลบตรงนี้
   } = usePlates();
 
-  // ─── search/filter state ────────────────────────────────────────────
+  // ─── state สำหรับ Quick + Advanced Search ──────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate,  setStartDate]  = useState('');
   const [endDate,    setEndDate]    = useState('');
@@ -63,6 +63,7 @@ export default function PlateManager() {
     debouncedSearch(term);
   }, [debouncedSearch]);
 
+  // ─── advanced search ────────────────────────────────────────────────
   const handleAdvancedSearch = useCallback(params => {
     setSearchTerm(params.search_term || '');
     setStartDate(params.start_date || '');
@@ -75,14 +76,17 @@ export default function PlateManager() {
     searchPlatesWithParams(params);
   }, [searchPlatesWithParams]);
 
+  // ─── filter by N days ──────────────────────────────────────────────
   const handleDateRangeSearch = useCallback(days => {
     searchLastNDays(days);
   }, [searchLastNDays]);
 
+  // ─── เลือกโหมด quick/advanced ─────────────────────────────────────
   const handleSearchModeChange = useCallback(mode => {
     setSearchMode(mode);
   }, []);
 
+  // ─── รีเซ็ตทุกอย่าง ────────────────────────────────────────────────
   const handleResetSearch = useCallback(() => {
     setSearchTerm('');
     setStartDate('');
@@ -95,12 +99,12 @@ export default function PlateManager() {
     loadLatestPlates();
   }, [loadLatestPlates]);
 
-  // ─── load on mount & whenever bumpRefresh() is called ───────────────
+  // ─── โหลดข้อมูลตอน mount & เมื่อ bumpRefresh เปลี่ยน ───────────────
   useEffect(() => {
     loadLatestPlates();
   }, [loadLatestPlates, refreshCount]);
 
-  // ─── pagination บน allPlates ──────────────────────────────────────
+  // ─── pagination ────────────────────────────────────────────────────
   const {
     currentPage,
     totalPages,
@@ -113,7 +117,7 @@ export default function PlateManager() {
     goToPage
   } = usePagination(allPlates, 50);
 
-  // ─── format timestamp → Thai date/time ─────────────────────────────
+  // ─── แปลง timestamp → dateStr/timeStr ไทย ─────────────────────────
   const formattedPlates = useMemo(() => {
     return displayItems.map(p => {
       const dt = p.timestamp ? new Date(p.timestamp) : null;
@@ -135,13 +139,26 @@ export default function PlateManager() {
     });
   }, [displayItems]);
 
+  // ─── ลบป้าย (เรียก API) ────────────────────────────────────────────
+  const handleDelete = async (id) => {
+    if (!isAdmin) return;
+    if (!window.confirm('คุณแน่ใจจะลบรายการนี้หรือไม่?')) return;
+    try {
+      await deletePlate(id);
+      loadLatestPlates();
+    } catch (err) {
+      console.error(err);
+      alert('ลบรายการไม่สำเร็จ');
+    }
+  };
+
   return (
     <div className="container mt-4 plate-manager">
       <ApiStatus status={apiStatus} />
 
       <SearchForm
+        searchMode={searchMode}
         searchTerm={searchTerm}
-        onSearchTermChange={handleSearchTermChange}
         startDate={startDate}
         endDate={endDate}
         startHour={startHour}
@@ -149,14 +166,14 @@ export default function PlateManager() {
         province={province}
         idCamera={idCamera}
         cameraName={cameraName}
-        searchMode={searchMode}
         lastSearchParams={lastSearchParams}
         loading={loading}
+        onSearchTermChange={handleSearchTermChange}
         onSearch={handleAdvancedSearch}
-        onReset={handleResetSearch}
-        onLoadLatestPlates={loadLatestPlates}
         onSearchLastNDays={handleDateRangeSearch}
         onSearchModeChange={handleSearchModeChange}
+        onReset={handleResetSearch}
+        onLoadLatestPlates={loadLatestPlates}
       />
 
       <StatusDisplay loading={loading} error={error} />
@@ -169,16 +186,17 @@ export default function PlateManager() {
             itemsPerPage={itemsPerPage}
             totalRecords={totalRecords}
             getPlateNumber={getPlateNumber}
-            canDelete={false}               // ปิดปุ่มลบชั่วคราว
             onItemsPerPageChange={changeItemsPerPage}
+            canDelete={isAdmin}       // เฉพาะ admin เท่านั้น
+            onDelete={handleDelete}
           />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalRecords={totalRecords}
             itemsPerPage={itemsPerPage}
-            goToNextPage={goToNextPage}
             goToPrevPage={goToPrevPage}
+            goToNextPage={goToNextPage}
             goToPage={goToPage}
           />
         </>
