@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://license-plate-system.onrender.com';
 
 const authClient = axios.create({
   baseURL: API_URL,
