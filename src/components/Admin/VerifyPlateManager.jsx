@@ -71,7 +71,6 @@ export default function VerifyPlateManager() {
       }
       setDisplayedImages(imgs.filter(img => img.name || img.url));
     }
-
     if (!loading) loadImages();
   }, [allImageFiles, imagePage, loading]);
 
@@ -103,10 +102,24 @@ export default function VerifyPlateManager() {
     }
   };
 
+  // ✅ ถ้ายังมีการแก้ไขค้างอยู่ของแถวนี้ ให้ commit (PATCH) ก่อนดำเนินการต่อ
+  const commitIfEditingFor = async (rowId) => {
+    if (editing.id === rowId && editing.field) {
+      try {
+        await handleUpdateField(editing.id, editing.field, editValue);
+      } finally {
+        setEditing({ id: null, field: null });
+      }
+    }
+  };
+
   const handleVerify = async idx => {
     const cand = displayedCandidates[idx];
     setProcessingId(idx);
     try {
+      // บังคับเซฟค่าที่แก้บนหน้า verify ก่อน
+      await commitIfEditingFor(cand.id);
+
       await plateService.verifyPlate(cand.id);
       bumpRefresh();
       const updated = await plateService.getCandidates();
@@ -122,6 +135,9 @@ export default function VerifyPlateManager() {
     const cand = displayedCandidates[idx];
     setProcessingId(idx);
     try {
+      // เผื่อผู้ใช้แก้ค้าง – บันทึกก่อน
+      await commitIfEditingFor(cand.id);
+
       await plateService.rejectCandidate(cand.id);
       bumpRefresh();
       const updated = await plateService.getCandidates();
@@ -133,6 +149,7 @@ export default function VerifyPlateManager() {
     }
   };
 
+  // PATCH เฉพาะตาราง candidate เท่านั้น (แก้เฉพาะหน้า verify)
   const handleUpdateField = async (id, field, value) => {
     try {
       const res = await fetch(`${API_URL}/plates/candidates/${id}`, {
@@ -141,15 +158,18 @@ export default function VerifyPlateManager() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
+        // backend map: 'plate_number' -> 'plate'
         body: JSON.stringify({ [field]: value }),
       });
       if (!res.ok) throw new Error('ไม่สามารถอัปเดตได้');
+
       bumpRefresh();
       setCandidatesBase(prev =>
         prev.map(p => (p.id === id ? { ...p, [field]: value } : p))
       );
     } catch (err) {
       alert(err.message);
+      throw err;
     }
   };
 
@@ -160,6 +180,7 @@ export default function VerifyPlateManager() {
 
   const stopEditing = async () => {
     const { id, field } = editing;
+    if (!id || !field) return;
     await handleUpdateField(id, field, editValue);
     setEditing({ id: null, field: null });
   };
@@ -291,10 +312,18 @@ export default function VerifyPlateManager() {
                     )}
                   </td>
                   <td>
-                    <button className="btn btn-success btn-sm me-2" onClick={() => handleVerify(idx)} disabled={processingId === idx}>
+                    <button
+                      className="btn btn-success btn-sm me-2"
+                      onClick={() => handleVerify(idx)}
+                      disabled={processingId === idx}
+                    >
                       {processingId === idx ? '⏳' : '✅ ยืนยัน'}
                     </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleReject(idx)} disabled={processingId === idx}>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => handleReject(idx)}
+                      disabled={processingId === idx}
+                    >
                       {processingId === idx ? '⏳' : '❌ ปฏิเสธ'}
                     </button>
                   </td>
