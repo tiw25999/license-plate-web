@@ -1,60 +1,118 @@
+// src/services/api.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000';
+// อ่านค่า BASE URL จาก ENV (ฝังตอน build)
+// - บน Render ให้ตั้ง REACT_APP_API_URL = https://license-plate-system.onrender.com
+// - ตอน dev ให้สร้าง .env.development ใส่ REACT_APP_API_URL=http://localhost:8000
+const API_URL =
+  process.env.REACT_APP_API_URL?.replace(/\/+$/, '') || 'http://localhost:8000';
 
+// instance หลักสำหรับเรียก API ปกติ
 const apiClient = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 });
 
-// Interceptor แนบ token
+// instance แยกไว้ refresh โดยเฉพาะ (กัน interceptor ซ้อน/วนลูป)
+const refreshClient = axios.create({
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 15000,
+});
+
+// แนบ access token ทุกครั้ง
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (token) config.headers['Authorization'] = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Interceptor สำหรับ refresh token เมื่อเจอ 401
+// ---- Refresh token แบบกันชนไม่ให้ยิงซ้ำหลายคำขอพร้อมกัน ----
+let isRefreshing = false;
+let pendingQueue = [];
+
+const processQueue = (error, token = null) => {
+  pendingQueue.forEach(({ resolve, reject, originalRequest }) => {
+    if (error) {
+      reject(error);
+    } else {
+      if (token) {
+        originalRequest.headers['Authorization'] = `Bearer ${token}`;
+      }
+      resolve(apiClient(originalRequest));
+    }
+  });
+  pendingQueue = [];
+};
+
+// ดัก 401 แล้วลอง refresh หนึ่งรอบ
 apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
-    if (error.response?.status === 401) {
-      try {
-        const refresh_token = localStorage.getItem('refresh_token');
-        if (!refresh_token) throw new Error('No refresh token');
+    const originalRequest = error.config;
 
-        // เรียก refresh_token endpoint
-        const refreshRes = await apiClient.post('/auth/refresh_token', { refresh_token });
-        const newToken = refreshRes.data.access_token;
-        localStorage.setItem('token', newToken);
-
-        // retry request เก่าด้วย token ใหม่
-        error.config.headers['Authorization'] = `Bearer ${newToken}`;
-        return apiClient(error.config);
-      } catch (err) {
-        // ถ้า refresh ล้มเหลว ให้ล้าง storage และพาไปหน้า login
-        localStorage.clear();
-        window.location.href = '/login';
-      }
+    // ถ้าไม่มี response หรือไม่ใช่ 401 -> โยนต่อ
+    if (!error.response || error.response.status !== 401) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    // กันไม่ให้ refresh endpoint เองมาดักซ้ำ
+    if (originalRequest?.url?.includes('/auth/refresh_token')) {
+      localStorage.clear();
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
+    // ถ้ามีการ refresh อยู่แล้ว -> เข้าคิวรอ token ใหม่
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        pendingQueue.push({ resolve, reject, originalRequest });
+      });
+    }
+
+    // เริ่มทำ refresh
+    isRefreshing = true;
+    try {
+      const refresh_token = localStorage.getItem('refresh_token');
+      if (!refresh_token) throw new Error('No refresh token');
+
+      const refreshRes = await refreshClient.post('/auth/refresh_token', {
+        refresh_token,
+      });
+
+      const newToken = refreshRes.data?.access_token;
+      if (!newToken) throw new Error('No access_token from refresh');
+
+      localStorage.setItem('token', newToken);
+
+      // เคลียร์คิวที่รออยู่ พร้อมแนบ token ใหม่
+      processQueue(null, newToken);
+
+      // ยิงคำขอเดิมซ้ำด้วย token ใหม่
+      originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+      return apiClient(originalRequest);
+    } catch (err) {
+      // refresh ล้มเหลว -> ล้างแล้วไปหน้า login
+      processQueue(err, null);
+      localStorage.clear();
+      window.location.href = '/login';
+      return Promise.reject(err);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
+// ----------------- Services -----------------
 export const plateService = {
   // ดึงป้ายที่ verify แล้วทั้งหมด (sort ก่อน slice)
   getLatestPlates: async (limit = 500) => {
     const res = await apiClient.get('/plates/get_plates');
     const arr = Array.isArray(res.data) ? res.data : [res.data];
-    // เรียง by timestamp ใหม่สุดก่อน
     arr.sort((a, b) => {
       const ta = new Date(a.timestamp || a.created_at).getTime();
       const tb = new Date(b.timestamp || b.created_at).getTime();
@@ -63,13 +121,11 @@ export const plateService = {
     return arr.slice(0, limit);
   },
 
-  // ค้นหาป้ายที่ verify แล้ว ตามเงื่อนไข
+  // ค้นหา
   searchPlates: async (params) => {
     const q = new URLSearchParams();
-    Object.entries(params).forEach(([key, val]) => {
-      if (val !== undefined && val !== '') {
-        q.append(key, val);
-      }
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== '') q.append(k, v);
     });
     const res = await apiClient.get(`/plates/search?${q.toString()}`);
     return res.data;
@@ -77,73 +133,36 @@ export const plateService = {
 
   // เพิ่ม plate candidate
   addPlate: async (plateNumber, province, id_camera, camera_name) => {
-    const payload = {
-      plate_number: plateNumber,
-      province,
-      id_camera,
-      camera_name
-    };
+    const payload = { plate_number: plateNumber, province, id_camera, camera_name };
     const res = await apiClient.post('/plates/add_plate', payload);
     return res.data;
   },
 
-  // ดึงกล้อง
-  getCameras: async () => {
-    const res = await apiClient.get('/plates/get_cameras');
-    return res.data;
-  },
+  // กล้อง/watchlist/alerts
+  getCameras: async () => (await apiClient.get('/plates/get_cameras')).data,
+  getWatchlists: async () => (await apiClient.get('/plates/get_watchlists')).data,
+  getAlerts: async (status = '') =>
+    (await apiClient.get(status ? `/plates/get_alerts?status=${status}` : '/plates/get_alerts')).data,
 
-  // ดึง watchlists
-  getWatchlists: async () => {
-    const res = await apiClient.get('/plates/get_watchlists');
-    return res.data;
-  },
+  // Health
+  checkHealth: async () => (await apiClient.get('/health')).data,
 
-  // ดึง alerts
-  getAlerts: async (status = '') => {
-    const url = status ? `/plates/get_alerts?status=${status}` : '/plates/get_alerts';
-    const res = await apiClient.get(url);
-    return res.data;
-  },
-
-  // ตรวจสอบสุขภาพ API
-  checkHealth: async () => {
-    const res = await apiClient.get('/health');
-    return res.data;
-  },
-
-  // ดึงรายชื่อจังหวัดจากป้ายที่ verify แล้ว
+  // รายชื่อจังหวัด
   getProvinces: async () => {
     const res = await apiClient.get('/plates/get_plates');
-    const provinces = Array.from(
-      new Set(res.data.map(p => p.province).filter(p => p))
-    );
-    return provinces;
+    return Array.from(new Set((res.data || []).map((p) => p.province).filter(Boolean)));
   },
 
-  // ดึง candidates รอ verify
-  getCandidates: async () => {
-    const res = await apiClient.get('/plates/candidates');
-    return res.data;
-  },
+  // Candidates
+  getCandidates: async () => (await apiClient.get('/plates/candidates')).data,
+  verifyPlate: async (candidateId) =>
+    (await apiClient.post(`/plates/verify_plate/${candidateId}`, null)).data,
+  rejectCandidate: async (candidateId) =>
+    (await apiClient.delete(`/plates/candidates/${candidateId}`)).data,
 
-  // verify candidate
-  verifyPlate: async (candidateId) => {
-    const res = await apiClient.post(`/plates/verify_plate/${candidateId}`, null);
-    return res.data;
-  },
-
-  // reject candidate
-  rejectCandidate: async (candidateId) => {
-    const res = await apiClient.delete(`/plates/candidates/${candidateId}`);
-    return res.data;
-  },
-
-  // **ลบป้ายที่ verify แล้ว** (admin)
-  deletePlate: async (plateId) => {
-    const res = await apiClient.delete(`/plates/delete_plate/${plateId}`);
-    return res.data;
-  },
+  // ลบป้าย (admin)
+  deletePlate: async (plateId) =>
+    (await apiClient.delete(`/plates/delete_plate/${plateId}`)).data,
 };
 
 export default plateService;
